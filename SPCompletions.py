@@ -1,5 +1,4 @@
 import sublime, sublime_plugin
-import subprocess
 import re
 import os
 
@@ -9,9 +8,13 @@ class SPCompletions(sublime_plugin.EventListener):
             line = view.substr(view.line(found)).strip()
             filename = line.split('<')[1][:-1]
             if not filename in loaded_files :
+                loaded_files.add(filename)
                 self.load_from_file(view, filename)
 
 
+    # TODO: Improve loading and caching. Should not require save, should be threaded, 
+    #       should detect modified .inc files
+    # TODO: After live updating is implemented, generate completions from current file.
     def load_from_file(self, view, filename) :
         path = self.get_file_path(view, filename)
         if path is None :
@@ -40,16 +43,17 @@ class SPCompletions(sublime_plugin.EventListener):
 
         return None
 
-
+    # TODO: Only return relevent completions, currently returns completions for includes
+    #       in every file.
     def on_query_completions(self, view, prefix, locations):
-        # TODO: Only show completions for SourcePawn
-        #if not view.match_selector(locations[0], 'source.sourcepawn -string -comment -constant'):
-            #return []
+        if not view.match_selector(locations[0], 'source.sp -string -comment -constant') \
+        and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
+            return []
 
         return (all_funcs, sublime.INHIBIT_WORD_COMPLETIONS |
             sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-SM_DEPRECATED_FUNCTIONS = [
+DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
     "native Float:operator/",
     "native Float:operator+",
@@ -94,6 +98,8 @@ def process_include_file(file_path) :
                 buffer = read_line(file)
                 if (buffer is not None and buffer.startswith('stock')) :
                     buffer = skip_brace_line(file, buffer)
+            elif buffer.startswith('#define') :
+                buffer = get_preprocessor_define(file, buffer)
             elif buffer.startswith('native') :
                 buffer = get_full_function_string(file, file_path, buffer, True)
             elif buffer.startswith('stock') :
@@ -102,6 +108,16 @@ def process_include_file(file_path) :
             elif buffer.startswith('forward') or buffer.startswith('functag') :
                 buffer = get_full_function_string(file, file_path, buffer, False)
             
+def get_preprocessor_define(file, buffer) :
+    # Regex the #define. Group 1 is the name, Group 2 is the value 
+    print 'Potential Define %s' % buffer
+    define = re.search('#define[\\s]+([^\\s]+)[\\s]+([^\\s]+)', buffer)
+    print define
+    if define :
+        buffer = ''
+        group = define.group(1, 1)
+        print group
+        all_funcs.append(group)
 
 def get_full_function_string(file, file_path, buffer, is_native) :
     """get_full_function_string(File, string, string, bool) -> string"""
@@ -123,7 +139,7 @@ def get_full_function_string(file, file_path, buffer, is_native) :
 
         buffer = read_line(file)
 
-    if not full_func_str in SM_DEPRECATED_FUNCTIONS :
+    if not full_func_str in DEPRECATED_FUNCTIONS :
         process_function_string(file_path, full_func_str, is_native)
 
     return buffer
