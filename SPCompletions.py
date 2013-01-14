@@ -1,3 +1,16 @@
+# SourcePawn Completions is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import sublime, sublime_plugin
 import re
 import os
@@ -73,7 +86,9 @@ all_funcs = []
 loaded_files = set() # to prevent loading files more than once
 docs = dict() # map function name to documentation
 
-
+# Code after this point adapted from 
+# https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19
+# Credit to MCPAN (mcpan@foxmail.com)
 def read_line(file) :
     """read_line(File) -> string"""
     line = file.readline()
@@ -83,6 +98,7 @@ def read_line(file) :
         return None
 
 def process_include_file(file_path) :
+    """process_include_file(string)"""
     with open(file_path) as file :
         found_comment = False
 
@@ -109,15 +125,18 @@ def process_include_file(file_path) :
                 buffer = get_full_function_string(file, file_path, buffer, False)
             
 def get_preprocessor_define(file, buffer) :
+    """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value 
     print 'Potential Define %s' % buffer
     define = re.search('#define[\\s]+([^\\s]+)[\\s]+([^\\s]+)', buffer)
     print define
     if define :
+        # The whole line is consumed, return an empty string to indicate that
         buffer = ''
         group = define.group(1, 1)
         print group
         all_funcs.append(group)
+    return buffer
 
 def get_full_function_string(file, file_path, buffer, is_native) :
     """get_full_function_string(File, string, string, bool) -> string"""
@@ -145,6 +164,8 @@ def get_full_function_string(file, file_path, buffer, is_native) :
     return buffer
 
 def process_function_string(file_path, func, is_native) :
+    """process_function_string(string, string, bool)"""
+
     (functype, remaining) = func.split(' ', 1)
     functype = functype.strip()
     # TODO: Process functags
