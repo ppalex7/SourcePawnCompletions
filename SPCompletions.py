@@ -37,6 +37,7 @@ class SPCompletions(sublime_plugin.EventListener):
     def load_from_file(self, view, filename) :
         path = self.get_file_path(view, filename)
         if path is None :
+            print 'Include File Not Found: %s' % filename
             return
 
         with open(path, 'r') as f :
@@ -50,10 +51,9 @@ class SPCompletions(sublime_plugin.EventListener):
 
     def get_file_path(self, view, filename) :
         # TODO: Don't hardcode this path
-        search_dirs = [
-            os.path.join(os.path.dirname(view.file_name()), 'include'),
-            'C:\\srcds\\tf\\addons\\sourcemod\\scripting\\include'
-        ]
+        os.chdir(os.path.dirname(view.file_name()))
+        search_dirs = sublime.load_settings('SPCompletions.sublime-settings').get('search_directories', \
+            [ os.path.join('.', 'include') ])
 
         for dir in search_dirs :
             file_path = os.path.join(dir, filename + '.inc')
