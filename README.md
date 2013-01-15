@@ -20,5 +20,4 @@ SP Completions is automatically active on .sp and .inc files. To generate the co
 
 ## Known Bugs
 
-* Completions lists are shared. All completions from other files will be available even if the include line does not exist in the current file.
 * Completion lists do not update. If an include file is modified, after it has been loaded by SP Completions, Sublime must be restarted to pick up this change.
