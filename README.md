@@ -8,11 +8,9 @@ Clone this repository into a subfolder of your Packages directory.
 
 ## Configuration
 
-There are currently no configuration files, but you will need to configure the include file search path.
+Create a copy of `SPCompltions.sublime-settings` in your User directory.
 
-By default the search paths are `.\include` and `C:\srcds\tf\addons\sourcemod\scripting\include`
-
-To modify the path, search for `'C:\\srcds\\tf\\addons\\sourcemod\\scripting\\include'` in SPCompletion.py and set this to the path containing your include files.
+Add directories in the order you want them to be searched. Locations are relative to the current file.
 
 ## Usage
 
