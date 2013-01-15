@@ -2,6 +2,8 @@
 
 Generates SourcePawn completions for all included .inc files.
 
+Based off [SourcePawn Snippet Generator by MCPAN](https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19).
+
 ## Installing
 
 Clone this repository into a subfolder of your Packages directory.
