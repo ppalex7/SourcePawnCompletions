@@ -17,9 +17,12 @@ import os
 
 class SPCompletions(sublime_plugin.EventListener):
     def on_post_save(self, view) :
+        included_by_file = included_files[view.file_name()]
+        del included_by_file[:]
         for found in view.find_all('^[\\s]*#include') :
             line = view.substr(view.line(found)).strip()
             filename = line.split('<')[1][:-1]
+            included_by_file.append(filename)
             if not filename in loaded_files :
                 loaded_files.add(filename)
                 self.load_from_file(view, filename)
@@ -85,6 +88,8 @@ DEPRECATED_FUNCTIONS = [
 all_funcs = []
 loaded_files = set() # to prevent loading files more than once
 docs = dict() # map function name to documentation
+included_files = defaultdict(list) # map project files to included files
+funcs = dict() # map include files to functions
 
 # Code after this point adapted from 
 # https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19
