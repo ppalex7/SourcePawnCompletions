@@ -14,6 +14,7 @@
 import sublime, sublime_plugin
 import re
 import os
+from collections import defaultdict
 
 class SPCompletions(sublime_plugin.EventListener):
     def on_post_save(self, view) :
@@ -26,6 +27,8 @@ class SPCompletions(sublime_plugin.EventListener):
             if not filename in loaded_files :
                 loaded_files.add(filename)
                 self.load_from_file(view, filename)
+
+        included_files[view.file_name] = included_by_file
 
 
     # TODO: Improve loading and caching. Should not require save, should be threaded, 
@@ -48,7 +51,7 @@ class SPCompletions(sublime_plugin.EventListener):
     def get_file_path(self, view, filename) :
         # TODO: Don't hardcode this path
         search_dirs = [
-            os.path.dirname(view.file_name()),
+            os.path.join(os.path.dirname(view.file_name()), 'include'),
             'C:\\srcds\\tf\\addons\\sourcemod\\scripting\\include'
         ]
 
@@ -59,14 +62,18 @@ class SPCompletions(sublime_plugin.EventListener):
 
         return None
 
-    # TODO: Only return relevent completions, currently returns completions for includes
-    #       in every file.
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], 'source.sp -string -comment -constant') \
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
             return []
 
-        return (all_funcs, sublime.INHIBIT_WORD_COMPLETIONS |
+        included_by_file = included_files[view.file_name()]
+        accessible_funcs = list()
+
+        for include in included_by_file :
+            accessible_funcs.extend(funcs[include])
+
+        return (accessible_funcs, sublime.INHIBIT_WORD_COMPLETIONS |
             sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
 DEPRECATED_FUNCTIONS = [
@@ -89,7 +96,7 @@ all_funcs = []
 loaded_files = set() # to prevent loading files more than once
 docs = dict() # map function name to documentation
 included_files = defaultdict(list) # map project files to included files
-funcs = dict() # map include files to functions
+funcs = defaultdict(list) # map include files to functions
 
 # Code after this point adapted from 
 # https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19
@@ -132,14 +139,11 @@ def process_include_file(file_path) :
 def get_preprocessor_define(file, buffer) :
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value 
-    print 'Potential Define %s' % buffer
     define = re.search('#define[\\s]+([^\\s]+)[\\s]+([^\\s]+)', buffer)
-    print define
     if define :
         # The whole line is consumed, return an empty string to indicate that
         buffer = ''
         group = define.group(1, 1)
-        print group
         all_funcs.append(group)
     return buffer
 
@@ -193,6 +197,10 @@ def process_function_string(file_path, func, is_native) :
         i += 1
     autocomplete += ')'
     all_funcs.append((funcname, autocomplete))
+    key = os.path.basename(file_path)[0:-4]
+    funclist = funcs[key]
+    funclist.append((funcname, autocomplete))
+    funcs[key] = funclist
 
 def skip_brace_line(file, buffer) :
     """skip_brace_line(File, string) -> string"""
