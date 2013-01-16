@@ -19,14 +19,13 @@ from collections import defaultdict
 class SPCompletions(sublime_plugin.EventListener):
     def on_post_save(self, view) :
         included_by_file = included_files[view.file_name()]
-        del included_by_file[:]
+        included_by_file.clear()
         for found in view.find_all('^[\\s]*#include') :
             line = view.substr(view.line(found)).strip()
             filename = line.split('<')[1][:-1]
-            included_by_file.append(filename)
             if not filename in loaded_files :
                 loaded_files.add(filename)
-                self.load_from_file(view, filename)
+                self.load_from_file(view, filename, included_by_file)
 
         included_files[view.file_name] = included_by_file
 
@@ -34,23 +33,23 @@ class SPCompletions(sublime_plugin.EventListener):
     # TODO: Improve loading and caching. Should not require save, should be threaded, 
     #       should detect modified .inc files
     # TODO: After live updating is implemented, generate completions from current file.
-    def load_from_file(self, view, filename) :
+    def load_from_file(self, view, filename, included_by_file) :
         path = self.get_file_path(view, filename)
         if path is None :
             print 'Include File Not Found: %s' % filename
             return
 
+        included_by_file.add(filename)
         with open(path, 'r') as f :
             print 'Processing Include File %s' % path
             includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
             for include in includes :
                 if not include in loaded_files :
                     loaded_files.add(include)
-                    self.load_from_file(view, include)
+                    self.load_from_file(view, include, included_by_file)
         process_include_file(path)
 
     def get_file_path(self, view, filename) :
-        # TODO: Don't hardcode this path
         os.chdir(os.path.dirname(view.file_name()))
         search_dirs = sublime.load_settings('SPCompletions.sublime-settings').get('search_directories', \
             [ os.path.join('.', 'include') ])
@@ -92,10 +91,9 @@ DEPRECATED_FUNCTIONS = [
     "forward operator%("
 ]
 
-all_funcs = []
 loaded_files = set() # to prevent loading files more than once
 docs = dict() # map function name to documentation
-included_files = defaultdict(list) # map project files to included files
+included_files = defaultdict(set) # map project files to included files
 funcs = defaultdict(list) # map include files to functions
 
 # Code after this point adapted from 
@@ -180,8 +178,15 @@ def process_function_string(file_path, func, is_native) :
     # TODO: Process functags
     if functype == 'functag' :
         return
-    (funcname, remaining) = remaining.split('(', 1)
-    funcname = funcname.strip()
+    (funcname_and_return, remaining) = remaining.split('(', 1)
+    funcname_and_return = funcname_and_return.strip()
+    split_funcname_and_return = funcname_and_return.split(':')
+    if len(split_funcname_and_return) > 1 :
+        funcname = split_funcname_and_return[1]
+        returntype = split_funcname_and_return[0]
+    else :
+        funcname = split_funcname_and_return[0]
+
     remaining = remaining.strip()
     if remaining == ')' :
         params = []
@@ -196,10 +201,10 @@ def process_function_string(file_path, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    all_funcs.append((funcname, autocomplete))
+    all_funcs.append((funcname_and_return, autocomplete))
     key = os.path.basename(file_path)[0:-4]
     funclist = funcs[key]
-    funclist.append((funcname, autocomplete))
+    funclist.append((funcname_and_return, autocomplete))
     funcs[key] = funclist
 
 def skip_brace_line(file, buffer) :
