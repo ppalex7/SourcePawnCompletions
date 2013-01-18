@@ -18,46 +18,53 @@ from collections import defaultdict
 
 class SPCompletions(sublime_plugin.EventListener):
     def on_post_save(self, view) :
-        included_by_file = included_files[view.file_name()]
-        included_by_file.clear()
+        current_node = nodes.get(view.file_name())
+
+        if current_node is None :
+            current_node = Node(view.file_name())
+            nodes[view.file_name()] = current_node
+
         for found in view.find_all('^[\\s]*#include') :
             line = view.substr(view.line(found)).strip()
-            filename = line.split('<')[1][:-1]
-            if not filename in loaded_files :
-                loaded_files.add(filename)
-                self.load_from_file(view, filename, included_by_file)
+            base_file_name = line.split('<')[1][:-1]
+            self.load_from_file(view, base_file_name, current_node)
 
-        included_files[view.file_name] = included_by_file
-
-
-    # TODO: Improve loading and caching. Should not require save, should be threaded, 
-    #       should detect modified .inc files
-    # TODO: After live updating is implemented, generate completions from current file.
-    def load_from_file(self, view, filename, included_by_file) :
-        path = self.get_file_path(view, filename)
-        if path is None :
-            print 'Include File Not Found: %s' % filename
+    def load_from_file(self, view, base_file_name, parent_node) :
+        file_name = self.get_file_name(view, base_file_name)
+        if file_name is None :
+            print 'Include File Not Found: %s' % base_file_name
             return
 
-        included_by_file.add(filename)
-        with open(path, 'r') as f :
-            print 'Processing Include File %s' % path
+        stop = True
+        node = nodes.get(file_name)
+        if node is None :
+            node = Node(file_name)
+            stop = False
+
+        parent_node.add_child(node)
+
+        if stop :
+            return
+
+        with open(file_name, 'r') as f :
+            print 'Processing Include File %s' % file_name
             includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
             for include in includes :
-                if not include in loaded_files :
-                    loaded_files.add(include)
-                    self.load_from_file(view, include, included_by_file)
-        process_include_file(path)
+                self.load_from_file(view, include, node)
 
-    def get_file_path(self, view, filename) :
-        os.chdir(os.path.dirname(view.file_name()))
+        process_include_file(node)
+
+
+    def get_file_name(self, view, base_file_name) :
+        os.chdir(os.path.dirname(view.base_file_name()))
         search_dirs = sublime.load_settings('SPCompletions.sublime-settings').get('search_directories', \
             [ os.path.join('.', 'include') ])
 
         for dir in search_dirs :
-            file_path = os.path.join(dir, filename + '.inc')
-            if os.path.exists(file_path) :
-                return file_path
+            file_name = os.path.join(dir, base_file_name + '.inc')
+            print file_name
+            if os.path.exists(file_name) :
+                return file_name
 
         return None
 
@@ -66,14 +73,47 @@ class SPCompletions(sublime_plugin.EventListener):
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
             return []
 
-        included_by_file = included_files[view.file_name()]
-        accessible_funcs = list()
+        return (self.generate_funclist(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-        for include in included_by_file :
-            accessible_funcs.extend(funcs[include])
+    def generate_funclist(self, file_name) :
+        funclist = [ ]
+        visited = set()
+        node = nodes[file_name]
 
-        return (accessible_funcs, sublime.INHIBIT_WORD_COMPLETIONS |
-            sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        self.generate_funclist_recur(node, funclist, visited)
+        funclist.sort()
+        return funclist
+
+    def generate_funclist_recur(self, node, list, visited) :
+        if node in visited :
+            return
+        
+        visited.add(node)
+        for child in node.children :
+            self.generate_funclist_recur(child, list, visited)
+
+        list.extend(node.funcs)
+
+
+nodes = dict() # map files to nodes
+
+class Node :
+    def __init__(self, file_name) :
+        self.file_name = file_name
+        self.children = set()
+        self.parents = set()
+        self.funcs = [ ]
+
+    def add_child(self, node) :
+        self.children.add(node)
+        node.parents.add(self)
+
+    def remove_child(self, node) :
+        self.children.remove(node)
+        node.parents.remove(self)
+
+        if len(node.parents) <= 0 :
+            nodes.remove(node)
 
 DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
@@ -107,9 +147,9 @@ def read_line(file) :
     else :
         return None
 
-def process_include_file(file_path) :
+def process_include_file(node) :
     """process_include_file(string)"""
-    with open(file_path) as file :
+    with open(node.file_name) as file :
         found_comment = False
 
         while True :
@@ -125,16 +165,16 @@ def process_include_file(file_path) :
                 if (buffer is not None and buffer.startswith('stock')) :
                     buffer = skip_brace_line(file, buffer)
             elif buffer.startswith('#define') :
-                buffer = get_preprocessor_define(file, buffer)
+                buffer = get_preprocessor_define(file, node, buffer)
             elif buffer.startswith('native') :
-                buffer = get_full_function_string(file, file_path, buffer, True)
+                buffer = get_full_function_string(file, node, buffer, True)
             elif buffer.startswith('stock') :
-                buffer = get_full_function_string(file, file_path, buffer, True)
+                buffer = get_full_function_string(file, node, buffer, True)
                 buffer = skip_brace_line(file, buffer)
             elif buffer.startswith('forward') or buffer.startswith('functag') :
-                buffer = get_full_function_string(file, file_path, buffer, False)
+                buffer = get_full_function_string(file, node, buffer, False)
             
-def get_preprocessor_define(file, buffer) :
+def get_preprocessor_define(file, node, buffer) :
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value 
     define = re.search('#define[\\s]+([^\\s]+)[\\s]+([^\\s]+)', buffer)
@@ -142,10 +182,10 @@ def get_preprocessor_define(file, buffer) :
         # The whole line is consumed, return an empty string to indicate that
         buffer = ''
         group = define.group(1, 1)
-        all_funcs.append(group)
+        node.funcs.append(group)
     return buffer
 
-def get_full_function_string(file, file_path, buffer, is_native) :
+def get_full_function_string(file, node, buffer, is_native) :
     """get_full_function_string(File, string, string, bool) -> string"""
     multi_line = False
     temp = ''
@@ -166,11 +206,11 @@ def get_full_function_string(file, file_path, buffer, is_native) :
         buffer = read_line(file)
 
     if not full_func_str in DEPRECATED_FUNCTIONS :
-        process_function_string(file_path, full_func_str, is_native)
+        process_function_string(node, full_func_str, is_native)
 
     return buffer
 
-def process_function_string(file_path, func, is_native) :
+def process_function_string(node, func, is_native) :
     """process_function_string(string, string, bool)"""
 
     (functype, remaining) = func.split(' ', 1)
@@ -201,11 +241,7 @@ def process_function_string(file_path, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    all_funcs.append((funcname_and_return, autocomplete))
-    key = os.path.basename(file_path)[0:-4]
-    funclist = funcs[key]
-    funclist.append((funcname_and_return, autocomplete))
-    funcs[key] = funclist
+    node.funcs.append((funcname, autocomplete))
 
 def skip_brace_line(file, buffer) :
     """skip_brace_line(File, string) -> string"""
