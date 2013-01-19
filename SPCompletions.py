@@ -18,18 +18,27 @@ from collections import defaultdict
 
 class SPCompletions(sublime_plugin.EventListener):
     def on_post_save(self, view) :
+        if not view.match_selector(0, 'source.sp') \
+        and not view.match_selector(0, 'source.inc'):
+            return
+
         current_node = nodes.get(view.file_name())
 
         if current_node is None :
             current_node = Node(view.file_name())
             nodes[view.file_name()] = current_node
 
+        base_includes = set()
+
         for found in view.find_all('^[\\s]*#include') :
             line = view.substr(view.line(found)).strip()
             base_file_name = line.split('<')[1][:-1]
-            self.load_from_file(view, base_file_name, current_node)
+            self.load_from_file(view, base_file_name, current_node, current_node, base_includes)
 
-    def load_from_file(self, view, base_file_name, parent_node) :
+        for removed_node in current_node.children.difference(base_includes) :
+            current_node.remove_child(removed_node)
+
+    def load_from_file(self, view, base_file_name, parent_node, base_node, base_includes) :
         file_name = self.get_file_name(view, base_file_name)
         if file_name is None :
             print 'Include File Not Found: %s' % base_file_name
@@ -39,9 +48,13 @@ class SPCompletions(sublime_plugin.EventListener):
         node = nodes.get(file_name)
         if node is None :
             node = Node(file_name)
+            nodes[file_name] = node
             stop = False
 
         parent_node.add_child(node)
+
+        if parent_node == base_node :
+            base_includes.add(node)
 
         if stop :
             return
@@ -50,13 +63,13 @@ class SPCompletions(sublime_plugin.EventListener):
             print 'Processing Include File %s' % file_name
             includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
             for include in includes :
-                self.load_from_file(view, include, node)
+                self.load_from_file(view, include, node, base_node)
 
         process_include_file(node)
 
 
     def get_file_name(self, view, base_file_name) :
-        os.chdir(os.path.dirname(view.base_file_name()))
+        os.chdir(os.path.dirname(view.file_name()))
         search_dirs = sublime.load_settings('SPCompletions.sublime-settings').get('search_directories', \
             [ os.path.join('.', 'include') ])
 
@@ -113,7 +126,7 @@ class Node :
         node.parents.remove(self)
 
         if len(node.parents) <= 0 :
-            nodes.remove(node)
+            nodes.pop(node.file_name)
 
 DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
@@ -154,6 +167,7 @@ def process_include_file(node) :
 
         while True :
             buffer = read_line(file)
+
             if buffer is None :
                 break 
             (buffer, found_comment) = read_string(buffer, found_comment)
