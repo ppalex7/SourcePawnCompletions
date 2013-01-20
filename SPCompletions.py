@@ -13,7 +13,7 @@
 
 import sublime, sublime_plugin
 import re
-import os 
+import os
 from collections import defaultdict
 from threading import Timer, Thread
 from Queue import *
@@ -46,7 +46,8 @@ class SPCompletions(sublime_plugin.EventListener):
         if self.delay_queue is not None :
             self.delay_queue.cancel()
 
-        self.delay_queue = Timer(1.0, add_to_queue_forward, [ view ])
+        delay_time = sublime.load_settings('SPCompletions.sublime-settings').get('live_refresh_delay', 1.0)
+        self.delay_queue = Timer(float(delay_time), add_to_queue_forward, [ view ])
         self.delay_queue.start()
 
     def is_sourcepawn_file(self, view) :
