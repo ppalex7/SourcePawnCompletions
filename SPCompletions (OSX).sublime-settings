@@ -1,0 +1,4 @@
+{
+    "search_directories": [ "./include" ],
+    "live_refresh_delay": 1.0
+}
