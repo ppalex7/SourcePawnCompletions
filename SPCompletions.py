@@ -225,9 +225,12 @@ def process_include_file(node) :
     """process_include_file(string)"""
     with open(node.file_name) as file :
         found_comment = False
+        found_enum = False
+        linenum = 0
 
         while True :
             buffer = read_line(file)
+            linenum += 1
 
             if buffer is None :
                 break 
@@ -241,6 +244,9 @@ def process_include_file(node) :
                     buffer = skip_brace_line(file, buffer)
             elif buffer.startswith('#define') :
                 buffer = get_preprocessor_define(file, node, buffer)
+            elif buffer.startswith('enum') :
+                found_enum = True
+                enum_contents = ''
             elif buffer.startswith('native') :
                 buffer = get_full_function_string(file, node, buffer, True)
             elif buffer.startswith('stock') :
@@ -248,7 +254,50 @@ def process_include_file(node) :
                 buffer = skip_brace_line(file, buffer)
             elif buffer.startswith('forward') or buffer.startswith('functag') :
                 buffer = get_full_function_string(file, node, buffer, False)
-            
+
+            if found_enum :
+                (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
+                
+
+def process_enum(node, buffer, enum_contents, found_enum) :
+    pos = buffer.find('}')
+    if pos != -1 :
+        buffer = buffer[0:pos]
+        found_enum = False
+
+    enum_contents = '%s%s' % (enum_contents, buffer)
+
+    ignore = False
+    if not found_enum :
+        pos = enum_contents.find('{')
+        enum_contents = enum_contents[pos + 1:]
+
+        for c in enum_contents :
+            if c == '=' :
+                ignore = True
+            elif c == ':' :
+                buffer = ''
+                continue
+            elif c == ',' :
+                buffer = buffer.strip()
+                if buffer != '' :
+                    node.funcs.append((buffer + '  (enum)', buffer))
+
+                ignore = False
+                buffer = ''
+                continue
+
+            if not ignore :
+                buffer += c
+
+        buffer = buffer.strip()
+        if buffer != '' :
+            node.funcs.append((buffer + '  (enum)', buffer))
+
+        buffer = ''
+
+    return (buffer, enum_contents, found_enum)
+
 def get_preprocessor_define(file, node, buffer) :
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value 
@@ -340,43 +389,27 @@ def skip_brace_line(file, buffer) :
 
 def read_string(buffer, found_comment) :
     """read_string(string, bool) -> (string, bool)"""
-    buffer = buffer.replace('\t', ' ')
+    buffer = buffer.replace('\t', ' ').strip()
+    result = ''
 
-    if (not found_comment) :
-        for i in range(len(buffer)) :
-            if (buffer[i] == '/' and buffer[i + 1] == '/') :
-                buffer = buffer[0:i]
-                break
-
-    buffer = buffer.strip()
-
-    comment_start = False
-    comment_end = False
-
-    pos = buffer.find('/*')
-    if pos != -1 :
-        comment_start = True
-        temp = buffer[pos + 1]
-        buffer = buffer[0:pos].strip()
-
-        pos = temp.find('*/')
-        if pos != -1 :
-            comment_end = True
-            temp = temp[pos + 1].strip()
+    i = 0
+    while i < len(buffer) :
+        if buffer[i] == '/' and i + 1 < len(buffer):
+            if buffer[i + 1] == '/' :
+                return (result, found_comment)
+            elif buffer[i + 1] == '*' :
+                found_comment = True
+                i += 1
+            elif not found_comment :
+                result += '/'
+        elif found_comment :
+            if buffer[i] == '*' and i + 1 < len(buffer) and buffer[i + 1] == '/' :
+                found_comment = False
+                i += 1
         else :
-            temp = ''
+            result += buffer[i]
 
-        if buffer != '' or temp != '' :
-            buffer = '%s%s' % (buffer, temp)
-    else :
-        pos = buffer.find('*/')
-        if pos != -1 :
-            comment_end = True
-            if pos + 2 == len(buffer):
-                buffer = ''
-            else :
-                buffer = buffer[pos + 2]
+        i += 1
 
-    buffer = buffer.strip()
+    return (result, found_comment)
 
-    return (buffer, comment_start ^ comment_end)
