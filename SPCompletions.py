@@ -13,74 +13,45 @@
 
 import sublime, sublime_plugin
 import re
-import os
+import os 
 from collections import defaultdict
+from threading import Timer, Thread
+from Queue import *
 
 class SPCompletions(sublime_plugin.EventListener):
+    def __init__(self) :
+        self.process_thread = ProcessQueueThread()
+        self.process_thread.start()
+        self.delay_queue = None
+        load_search_dirs(True)
+
+    def on_modified(self, view) :
+        self.add_to_queue_delayed(view)
+
     def on_post_save(self, view) :
-        if not view.match_selector(0, 'source.sp') \
-        and not view.match_selector(0, 'source.inc'):
+        self.add_to_queue_now(view)
+
+    def on_load(self, view) :
+        self.add_to_queue_now(view)
+
+    def add_to_queue_now(self, view) :
+        if not self.is_sourcepawn_file(view):
+            return
+        add_to_queue(view)
+
+    def add_to_queue_delayed(self, view) :
+        if not self.is_sourcepawn_file(view):
             return
 
-        current_node = nodes.get(view.file_name())
+        if self.delay_queue is not None :
+            self.delay_queue.cancel()
 
-        if current_node is None :
-            current_node = Node(view.file_name())
-            nodes[view.file_name()] = current_node
+        self.delay_queue = Timer(1.0, add_to_queue_forward, [ view ])
+        self.delay_queue.start()
 
-        base_includes = set()
-
-        for found in view.find_all('^[\\s]*#include') :
-            line = view.substr(view.line(found)).strip()
-            base_file_name = line.split('<')[1][:-1]
-            self.load_from_file(view, base_file_name, current_node, current_node, base_includes)
-
-        for removed_node in current_node.children.difference(base_includes) :
-            current_node.remove_child(removed_node)
-
-    def load_from_file(self, view, base_file_name, parent_node, base_node, base_includes) :
-        file_name = self.get_file_name(view, base_file_name)
-        if file_name is None :
-            print 'Include File Not Found: %s' % base_file_name
-            return
-
-        stop = True
-        node = nodes.get(file_name)
-        if node is None :
-            node = Node(file_name)
-            nodes[file_name] = node
-            stop = False
-
-        parent_node.add_child(node)
-
-        if parent_node == base_node :
-            base_includes.add(node)
-
-        if stop :
-            return
-
-        with open(file_name, 'r') as f :
-            print 'Processing Include File %s' % file_name
-            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
-            for include in includes :
-                self.load_from_file(view, include, node, base_node)
-
-        process_include_file(node)
-
-
-    def get_file_name(self, view, base_file_name) :
-        os.chdir(os.path.dirname(view.file_name()))
-        search_dirs = sublime.load_settings('SPCompletions.sublime-settings').get('search_directories', \
-            [ os.path.join('.', 'include') ])
-
-        for dir in search_dirs :
-            file_name = os.path.join(dir, base_file_name + '.inc')
-            print file_name
-            if os.path.exists(file_name) :
-                return file_name
-
-        return None
-
+    def is_sourcepawn_file(self, view) :
+        return view.match_selector(0, 'source.sp') or view.match_selector(0, 'source.inc')
+        
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], 'source.sp -string -comment -constant') \
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
@@ -107,8 +78,97 @@ class SPCompletions(sublime_plugin.EventListener):
 
         list.extend(node.funcs)
 
+def load_search_dirs(register_callback = False) :
+    settings = sublime.load_settings('SPCompletions.sublime-settings')
+    if (register_callback) :
+        settings.add_on_change('SPCompletions', on_settings_modified)
+    del search_dirs[:]
+    search_dirs.extend(settings.get('search_directories', [ os.path.join('.', 'include') ]))
 
+def on_settings_modified() :
+    load_search_dirs()
+
+def add_to_queue_forward(view) :
+    sublime.set_timeout(lambda: add_to_queue(view), 0)
+
+def add_to_queue(view) :
+    # The view can only be accessed from the main thread, so run the regex
+    # now and process the results later
+    includes = [ ]
+    for found in view.find_all('^[\\s]*#include') :
+        includes.append(view.substr(view.line(found)).strip())
+
+    # Pointless to add nothing to the queue
+    if len(includes) <= 0 :
+        return
+
+    to_process.put((view.file_name(), includes))
+
+to_process = Queue()
 nodes = dict() # map files to nodes
+search_dirs = [ ]
+
+class ProcessQueueThread(Thread) :
+    def run(self) :
+        while True :
+            (view_file_name, includes) = to_process.get()
+            self.process(view_file_name, includes)
+
+    def process(self, view_file_name, includes) :
+        current_node = nodes.get(view_file_name)
+
+        if current_node is None :
+            current_node = Node(view_file_name)
+            nodes[view_file_name] = current_node
+
+        base_includes = set()
+
+        for line in includes:
+            base_file_name = line.split('<')[1][:-1]
+            self.load_from_file(view_file_name, base_file_name, current_node, current_node, base_includes)
+
+        for removed_node in current_node.children.difference(base_includes) :
+            current_node.remove_child(removed_node)
+
+    def load_from_file(self, view_file_name, base_file_name, parent_node, base_node, base_includes) :
+        file_name = self.get_file_name(view_file_name, base_file_name)
+        if file_name is None :
+            print 'Include File Not Found: %s' % base_file_name
+            return
+
+        stop = True
+        node = nodes.get(file_name)
+        if node is None :
+            node = Node(file_name)
+            nodes[file_name] = node
+            stop = False
+
+        parent_node.add_child(node)
+
+        if parent_node == base_node :
+            base_includes.add(node)
+
+        if stop :
+            return
+
+        with open(file_name, 'r') as f :
+            print 'Processing Include File %s' % file_name
+            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
+            for include in includes :
+                self.load_from_file(view_file_name, include, node, base_node, base_includes)
+
+        process_include_file(node)
+
+
+    def get_file_name(self, view_file_name, base_file_name) :
+        os.chdir(os.path.dirname(view_file_name))
+        for dir in search_dirs :
+            file_name = os.path.join(dir, base_file_name + '.inc')
+            if os.path.exists(file_name) :
+                return file_name
+
+        return None
+
 
 class Node :
     def __init__(self, file_name) :
@@ -191,12 +251,13 @@ def process_include_file(node) :
 def get_preprocessor_define(file, node, buffer) :
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value 
-    define = re.search('#define[\\s]+([^\\s]+)[\\s]+([^\\s]+)', buffer)
+    define = re.search('#define[\\s]+([^\\s]+)[\\s]+(.+)', buffer)
     if define :
         # The whole line is consumed, return an empty string to indicate that
         buffer = ''
-        group = define.group(1, 1)
-        node.funcs.append(group)
+        name = define.group(1)
+        value = define.group(2).strip()
+        node.funcs.append((name + '  (constant: ' + value + ')', name))
     return buffer
 
 def get_full_function_string(file, node, buffer, is_native) :
@@ -255,7 +316,7 @@ def process_function_string(node, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    node.funcs.append((funcname, autocomplete))
+    node.funcs.append((funcname + '  (function)', autocomplete))
 
 def skip_brace_line(file, buffer) :
     """skip_brace_line(File, string) -> string"""
