@@ -59,25 +59,25 @@ class SPCompletions(sublime_plugin.EventListener):
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
             return []
 
-        return (self.generate_funclist(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        return (self.generate_funcset(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-    def generate_funclist(self, file_name) :
-        funclist = [ ]
+    def generate_funcset(self, file_name) :
+        funcset = set()
         visited = set()
         node = nodes[file_name]
 
-        self.generate_funclist_recur(node, funclist, visited)
-        return sorted_nicely(set(funclist))
+        self.generate_funcset_recur(node, funcset, visited)
+        return sorted_nicely(funcset)
 
-    def generate_funclist_recur(self, node, list, visited) :
+    def generate_funcset_recur(self, node, funcset, visited) :
         if node in visited :
             return
         
         visited.add(node)
         for child in node.children :
-            self.generate_funclist_recur(child, list, visited)
+            self.generate_funcset_recur(child, funcset, visited)
 
-        list.extend(node.funcs)
+        funcset.update(node.funcs)
 
 def sorted_nicely( l ): 
     """ Sort the given iterable in the way that humans expect.""" 
@@ -177,7 +177,7 @@ class Node :
         self.file_name = file_name
         self.children = set()
         self.parents = set()
-        self.funcs = [ ]
+        self.funcs = set()
 
     def add_child(self, node) :
         self.children.add(node)
@@ -250,7 +250,7 @@ def process_include_file(node) :
         process_lines(file, node)
 
 def process_lines(line_reader, node) :
-    del node.funcs[:]
+    node.funcs.clear()
 
     found_comment = False
     found_enum = False
@@ -306,7 +306,9 @@ def process_variable(node, buffer) :
             if c == ':' :
                 result = ''
             elif c == ' ' or c == '=' or c == ';' :
-                node.funcs.append((result + '  (variable)', result))
+                result = result.strip()
+                if result != '' :
+                    node.funcs.add((result + '  (variable)', result))
                 result = ''
                 consumingName = False
                 consumingBrackets = False
@@ -317,8 +319,9 @@ def process_variable(node, buffer) :
         elif c == ',' :
             consumingName = True
 
+    result = result.strip()
     if result != '' :
-        node.funcs.append((result + '  (variable)', result))
+        node.funcs.add((result + '  (variable)', result))
 
     return ''
 
@@ -345,7 +348,7 @@ def process_enum(node, buffer, enum_contents, found_enum) :
             elif c == ',' :
                 buffer = buffer.strip()
                 if buffer != '' :
-                    node.funcs.append((buffer + '  (enum)', buffer))
+                    node.funcs.add((buffer + '  (enum)', buffer))
 
                 ignore = False
                 buffer = ''
@@ -356,7 +359,7 @@ def process_enum(node, buffer, enum_contents, found_enum) :
 
         buffer = buffer.strip()
         if buffer != '' :
-            node.funcs.append((buffer + '  (enum)', buffer))
+            node.funcs.add((buffer + '  (enum)', buffer))
 
         buffer = ''
 
@@ -371,7 +374,7 @@ def get_preprocessor_define(node, buffer) :
         buffer = ''
         name = define.group(1)
         value = define.group(2).strip()
-        node.funcs.append((name + '  (constant: ' + value + ')', name))
+        node.funcs.add((name + '  (constant: ' + value + ')', name))
     return buffer
 
 def get_full_function_string(line_reader, node, buffer, is_native, found_comment, brace_level) :
@@ -453,7 +456,7 @@ def process_function_string(node, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    node.funcs.append((funcname + '  (function)', autocomplete))
+    node.funcs.add((funcname + '  (function)', autocomplete))
 
 def skip_brace_line(line_reader, buffer) :
     """skip_brace_line(File, string) -> string"""
