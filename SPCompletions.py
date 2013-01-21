@@ -14,6 +14,7 @@
 import sublime, sublime_plugin
 import re
 import os
+import string
 from collections import defaultdict
 from threading import Timer, Thread
 from Queue import *
@@ -51,33 +52,38 @@ class SPCompletions(sublime_plugin.EventListener):
         self.delay_queue.start()
 
     def is_sourcepawn_file(self, view) :
-        return view.match_selector(0, 'source.sp') or view.match_selector(0, 'source.inc')
+        return view.file_name() is not None and view.match_selector(0, 'source.sp') or view.match_selector(0, 'source.inc')
         
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], 'source.sp -string -comment -constant') \
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
             return []
 
-        return (self.generate_funclist(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        return (self.generate_funcset(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
 
-    def generate_funclist(self, file_name) :
-        funclist = [ ]
+    def generate_funcset(self, file_name) :
+        funcset = set()
         visited = set()
         node = nodes[file_name]
 
-        self.generate_funclist_recur(node, funclist, visited)
-        funclist.sort()
-        return funclist
+        self.generate_funcset_recur(node, funcset, visited)
+        return sorted_nicely(funcset)
 
-    def generate_funclist_recur(self, node, list, visited) :
+    def generate_funcset_recur(self, node, funcset, visited) :
         if node in visited :
             return
         
         visited.add(node)
         for child in node.children :
-            self.generate_funclist_recur(child, list, visited)
+            self.generate_funcset_recur(child, funcset, visited)
 
-        list.extend(node.funcs)
+        funcset.update(node.funcs)
+
+def sorted_nicely( l ): 
+    """ Sort the given iterable in the way that humans expect.""" 
+    convert = lambda text: int(text) if text.isdigit() else text 
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key[0]) ] 
+    return sorted(l, key = alphanum_key)
 
 def load_search_dirs(register_callback = False) :
     settings = sublime.load_settings('SPCompletions.sublime-settings')
@@ -95,15 +101,7 @@ def add_to_queue_forward(view) :
 def add_to_queue(view) :
     # The view can only be accessed from the main thread, so run the regex
     # now and process the results later
-    includes = [ ]
-    for found in view.find_all('^[\\s]*#include') :
-        includes.append(view.substr(view.line(found)).strip())
-
-    # Pointless to add nothing to the queue
-    if len(includes) <= 0 :
-        return
-
-    to_process.put((view.file_name(), includes))
+    to_process.put((view.file_name(), view.substr(sublime.Region(0, view.size()))))
 
 to_process = Queue()
 nodes = dict() # map files to nodes
@@ -112,10 +110,10 @@ search_dirs = [ ]
 class ProcessQueueThread(Thread) :
     def run(self) :
         while True :
-            (view_file_name, includes) = to_process.get()
-            self.process(view_file_name, includes)
+            (view_file_name, view_buffer) = to_process.get()
+            self.process(view_file_name, view_buffer)
 
-    def process(self, view_file_name, includes) :
+    def process(self, view_file_name, view_buffer) :
         current_node = nodes.get(view_file_name)
 
         if current_node is None :
@@ -124,12 +122,15 @@ class ProcessQueueThread(Thread) :
 
         base_includes = set()
 
-        for line in includes:
-            base_file_name = line.split('<')[1][:-1]
-            self.load_from_file(view_file_name, base_file_name, current_node, current_node, base_includes)
+        includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', view_buffer, re.MULTILINE)
+
+        for include in includes:
+            self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
 
         for removed_node in current_node.children.difference(base_includes) :
             current_node.remove_child(removed_node)
+
+        process_buffer(view_buffer, current_node)
 
     def load_from_file(self, view_file_name, base_file_name, parent_node, base_node, base_includes) :
         file_name = self.get_file_name(view_file_name, base_file_name)
@@ -176,7 +177,7 @@ class Node :
         self.file_name = file_name
         self.children = set()
         self.parents = set()
-        self.funcs = [ ]
+        self.funcs = set()
 
     def add_child(self, node) :
         self.children.add(node)
@@ -188,6 +189,25 @@ class Node :
 
         if len(node.parents) <= 0 :
             nodes.pop(node.file_name)
+
+class TextReader:
+    def __init__(self, text):
+        self.text = text.splitlines()
+        self.position = -1
+
+    def readline(self) :
+        self.position += 1
+        
+        if self.position < len(self.text) :
+            retval = self.text[self.position]
+            if retval == '' :
+                return '\n'
+            else :
+                return retval
+        else :
+            return ''
+
+        
 
 DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
@@ -221,43 +241,89 @@ def read_line(file) :
     else :
         return None
 
+def process_buffer(text, node) :
+    text_reader = TextReader(text)
+    process_lines(text_reader, node)
+
 def process_include_file(node) :
-    """process_include_file(string)"""
     with open(node.file_name) as file :
-        found_comment = False
-        found_enum = False
-        linenum = 0
+        process_lines(file, node)
 
-        while True :
-            buffer = read_line(file)
-            linenum += 1
+def process_lines(line_reader, node) :
+    node.funcs.clear()
 
-            if buffer is None :
-                break 
-            (buffer, found_comment) = read_string(buffer, found_comment)
-            if len(buffer) <= 0 :
-                continue
+    found_comment = False
+    found_enum = False
+    brace_level = 0
+    
+    while True :
+        buffer = read_line(line_reader)
 
-            if buffer.startswith('#pragma deprecated') :
-                buffer = read_line(file)
-                if (buffer is not None and buffer.startswith('stock')) :
-                    buffer = skip_brace_line(file, buffer)
-            elif buffer.startswith('#define') :
-                buffer = get_preprocessor_define(file, node, buffer)
-            elif buffer.startswith('enum') :
-                found_enum = True
-                enum_contents = ''
-            elif buffer.startswith('native') :
-                buffer = get_full_function_string(file, node, buffer, True)
-            elif buffer.startswith('stock') :
-                buffer = get_full_function_string(file, node, buffer, True)
-                buffer = skip_brace_line(file, buffer)
-            elif buffer.startswith('forward') or buffer.startswith('functag') :
-                buffer = get_full_function_string(file, node, buffer, False)
+        if buffer is None :
+            break 
+        (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
+        if len(buffer) <= 0 :
+            continue
 
-            if found_enum :
-                (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
+        if buffer.startswith('#pragma deprecated') :
+            buffer = read_line(line_reader)
+            if buffer is not None and buffer.startswith('stock ') :
+                buffer = skip_brace_line(line_reader, buffer)
+        elif buffer.startswith('#define ') :
+            buffer = get_preprocessor_define(node, buffer)
+        elif buffer.startswith('enum ') :
+            found_enum = True
+            enum_contents = ''
+        elif buffer.startswith('native ') :
+            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, True, found_comment, brace_level)
+        elif buffer.startswith('stock ') :
+            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, True, found_comment, brace_level)
+            buffer = skip_brace_line(line_reader, buffer)
+        elif buffer.startswith('forward ') or buffer.startswith('functag ') :
+            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
+        elif buffer.startswith('new ') or buffer.startswith('decl ') :
+            buffer = process_variable(node, buffer)
+        elif brace_level == 0 and not found_enum and not buffer.strip()[0] == '#' and not buffer.startswith('static ') and not buffer.startswith('static const '):
+            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
+
+        if found_enum :
+            (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
                 
+def check_for_function_definition(line_reader, node, buffer) :
+    return
+
+def process_variable(node, buffer) :
+    result = ''
+    consumingKeyword = True
+    consumingName = False
+    consumingBrackets = False
+    for c in buffer :
+        if consumingKeyword :
+            if c == ' ' :
+                consumingKeyword = False
+                consumingName = True
+        elif consumingName :
+            if c == ':' :
+                result = ''
+            elif c == ' ' or c == '=' or c == ';' :
+                result = result.strip()
+                if result != '' :
+                    node.funcs.add((result + '  (variable)', result))
+                result = ''
+                consumingName = False
+                consumingBrackets = False
+            elif c == '[' :
+                consumingBrackets = True
+            elif not consumingBrackets:
+                result += c
+        elif c == ',' :
+            consumingName = True
+
+    result = result.strip()
+    if result != '' :
+        node.funcs.add((result + '  (variable)', result))
+
+    return ''
 
 def process_enum(node, buffer, enum_contents, found_enum) :
     pos = buffer.find('}')
@@ -266,12 +332,13 @@ def process_enum(node, buffer, enum_contents, found_enum) :
         found_enum = False
 
     enum_contents = '%s%s' % (enum_contents, buffer)
+    buffer = ''
 
     ignore = False
     if not found_enum :
         pos = enum_contents.find('{')
         enum_contents = enum_contents[pos + 1:]
-
+        
         for c in enum_contents :
             if c == '=' :
                 ignore = True
@@ -281,7 +348,7 @@ def process_enum(node, buffer, enum_contents, found_enum) :
             elif c == ',' :
                 buffer = buffer.strip()
                 if buffer != '' :
-                    node.funcs.append((buffer + '  (enum)', buffer))
+                    node.funcs.add((buffer + '  (enum)', buffer))
 
                 ignore = False
                 buffer = ''
@@ -292,13 +359,13 @@ def process_enum(node, buffer, enum_contents, found_enum) :
 
         buffer = buffer.strip()
         if buffer != '' :
-            node.funcs.append((buffer + '  (enum)', buffer))
+            node.funcs.add((buffer + '  (enum)', buffer))
 
         buffer = ''
 
     return (buffer, enum_contents, found_enum)
 
-def get_preprocessor_define(file, node, buffer) :
+def get_preprocessor_define(node, buffer) :
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value 
     define = re.search('#define[\\s]+([^\\s]+)[\\s]+(.+)', buffer)
@@ -307,15 +374,27 @@ def get_preprocessor_define(file, node, buffer) :
         buffer = ''
         name = define.group(1)
         value = define.group(2).strip()
-        node.funcs.append((name + '  (constant: ' + value + ')', name))
+        node.funcs.add((name + '  (constant: ' + value + ')', name))
     return buffer
 
-def get_full_function_string(file, node, buffer, is_native) :
+def get_full_function_string(line_reader, node, buffer, is_native, found_comment, brace_level) :
     """get_full_function_string(File, string, string, bool) -> string"""
     multi_line = False
     temp = ''
+    full_func_str = None
+    open_paren_found = False
     while buffer is not None :
         buffer = buffer.strip()
+        if not open_paren_found :
+            parenpos = buffer.find('(')
+            eqpos = buffer.find('=')
+            if eqpos != -1 and (parenpos == -1 or eqpos < parenpos) :
+                return ('', found_comment, brace_level)
+            if buffer.find(';') != -1 and parenpos == -1 :
+                return ('', found_comment, brace_level)
+            if parenpos != -1 :
+                open_paren_found = True
+
         pos = buffer.rfind(')')
         if pos != -1 :
             full_func_str = buffer[0:pos + 1]
@@ -328,23 +407,34 @@ def get_full_function_string(file, node, buffer, is_native) :
         multi_line = True
         temp = '%s%s' % (temp, buffer)
 
-        buffer = read_line(file)
+        buffer = read_line(line_reader)
+        if buffer is None :
+            return (buffer, found_comment, brace_level)
+        (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
 
-    if not full_func_str in DEPRECATED_FUNCTIONS :
+    if full_func_str is not None and not full_func_str in DEPRECATED_FUNCTIONS :
         process_function_string(node, full_func_str, is_native)
 
-    return buffer
+    return (buffer, found_comment, brace_level)
 
 def process_function_string(node, func, is_native) :
     """process_function_string(string, string, bool)"""
 
-    (functype, remaining) = func.split(' ', 1)
-    functype = functype.strip()
+    split = func.split(' ', 1)
+    if len(split) < 2 :
+        functype = ''
+        remaining = split[0]
+    else :
+        functype = split[0].strip()
+        remaining = split[1]
     # TODO: Process functags
     if functype == 'functag' :
         return
-    (funcname_and_return, remaining) = remaining.split('(', 1)
-    funcname_and_return = funcname_and_return.strip()
+    split = remaining.split('(', 1)
+    if len(split) < 2 :
+        return
+    remaining = split[1]
+    funcname_and_return = split[0].strip()
     split_funcname_and_return = funcname_and_return.split(':')
     if len(split_funcname_and_return) > 1 :
         funcname = split_funcname_and_return[1]
@@ -366,9 +456,9 @@ def process_function_string(node, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    node.funcs.append((funcname + '  (function)', autocomplete))
+    node.funcs.add((funcname + '  (function)', autocomplete))
 
-def skip_brace_line(file, buffer) :
+def skip_brace_line(line_reader, buffer) :
     """skip_brace_line(File, string) -> string"""
     num_brace = 0
     found = False
@@ -384,10 +474,10 @@ def skip_brace_line(file, buffer) :
         if num_brace == 0 :
             return buffer
 
-        buffer = read_line(file)
+        buffer = read_line(line_reader)
     return buffer
 
-def read_string(buffer, found_comment) :
+def read_string(buffer, found_comment, brace_level) :
     """read_string(string, bool) -> (string, bool)"""
     buffer = buffer.replace('\t', ' ').strip()
     result = ''
@@ -396,7 +486,7 @@ def read_string(buffer, found_comment) :
     while i < len(buffer) :
         if buffer[i] == '/' and i + 1 < len(buffer):
             if buffer[i + 1] == '/' :
-                return (result, found_comment)
+                return (result, found_comment, brace_level + result.count('{') - result.count('}'))
             elif buffer[i + 1] == '*' :
                 found_comment = True
                 i += 1
@@ -406,10 +496,10 @@ def read_string(buffer, found_comment) :
             if buffer[i] == '*' and i + 1 < len(buffer) and buffer[i + 1] == '/' :
                 found_comment = False
                 i += 1
-        else :
+        elif not (i > 0 and buffer[i] == ' ' and buffer[i - 1] == ' '):
             result += buffer[i]
 
         i += 1
 
-    return (result, found_comment)
+    return (result, found_comment, brace_level + result.count('{') - result.count('}'))
 
