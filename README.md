@@ -1,6 +1,6 @@
 # Sublime SourcePawn Completions
 
-Generates SourcePawn completions for all included .inc files.
+A Sublime Text 2 plugin that dynamically genenerates completions for SourcePawn.
 
 Based off [SourcePawn Snippet Generator by MCPAN](https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19).
 
@@ -13,10 +13,12 @@ Clone this repository into a subfolder of your Packages directory.
 Create an `SPCompltions.sublime-settings` file in your User directory that looks like:
 
     {
-        "search_directories": [ ".\\include", "C:\\sourcemod\\scripting\\include" ]
+        "include_directory": "C:\\srcds\\tf\\addons\\sourcemod\\scripting\\include"
     }
 
-Add directories in the order you want them to be searched. Locations are relative to the current file.
+The path must be an absolute path. Relative paths are unsupported. 
+
+If you are upgrading from an older version, note that this configuration option has a different name.
 
 ## Usage
 
