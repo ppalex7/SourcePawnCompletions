@@ -1,4 +1,4 @@
 {
-    "search_directories": [ ".\\include" ],
+    "include_directory": "C:\\",
     "live_refresh_delay": 1.0
 }

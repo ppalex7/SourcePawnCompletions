@@ -18,13 +18,33 @@ import string
 from collections import defaultdict
 from threading import Timer, Thread
 from Queue import *
+import watchdog
+import watchdog.events
+import watchdog.observers
+import watchdog.utils
+from watchdog.utils.bricks import OrderedSetQueue
+
+class StringWrapper :
+    def __init__(self) :
+        self.value = ''
+    def set(self, newval) :
+        self.value = newval
+    def get(self) :
+        return self.value
+
+def unload_handler() :
+    file_observer.stop()
+    process_thread.stop()
+    # Get process_thread to stop by adding something to the queue
+    to_process.put(('', ''))
 
 class SPCompletions(sublime_plugin.EventListener):
     def __init__(self) :
-        self.process_thread = ProcessQueueThread()
-        self.process_thread.start()
+        process_thread.start()
         self.delay_queue = None
-        load_search_dirs(True)
+        file_observer.start()
+        self.file_event_handler = IncludeFileEventHandler()
+        self.load_include_dir(True)
 
     def on_modified(self, view) :
         self.add_to_queue_delayed(view)
@@ -79,21 +99,26 @@ class SPCompletions(sublime_plugin.EventListener):
 
         funcset.update(node.funcs)
 
+    def load_include_dir(self, register_callback = False) :
+        settings = sublime.load_settings('SPCompletions.sublime-settings')
+        if register_callback :
+            settings.add_on_change('SPCompletions', self.on_settings_modified)
+
+        include_dir.set(settings.get('include_directory', '.'))
+        if not os.path.isabs(include_dir.get()) :
+            raise exception.RuntimeException()
+
+        file_observer.unschedule_all()
+        file_observer.schedule(self.file_event_handler, include_dir.get(), True)
+
+    def on_settings_modified(self) :
+        self.load_include_dir()
+
 def sorted_nicely( l ): 
     """ Sort the given iterable in the way that humans expect.""" 
     convert = lambda text: int(text) if text.isdigit() else text 
     alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key[0]) ] 
     return sorted(l, key = alphanum_key)
-
-def load_search_dirs(register_callback = False) :
-    settings = sublime.load_settings('SPCompletions.sublime-settings')
-    if (register_callback) :
-        settings.add_on_change('SPCompletions', on_settings_modified)
-    del search_dirs[:]
-    search_dirs.extend(settings.get('search_directories', [ os.path.join('.', 'include') ]))
-
-def on_settings_modified() :
-    load_search_dirs()
 
 def add_to_queue_forward(view) :
     sublime.set_timeout(lambda: add_to_queue(view), 0)
@@ -103,22 +128,50 @@ def add_to_queue(view) :
     # now and process the results later
     to_process.put((view.file_name(), view.substr(sublime.Region(0, view.size()))))
 
-to_process = Queue()
-nodes = dict() # map files to nodes
-search_dirs = [ ]
+def add_include_to_queue(file_name) :
+    to_process.put((file_name, None))
 
-class ProcessQueueThread(Thread) :
+class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler) :
+    def __init__(self) :
+        watchdog.events.FileSystemEventHandler.__init__(self)
+
+    def on_created(self, event) :
+        sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
+
+    def on_modified(self, event) :
+        sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
+
+    def on_deleted(self, event) :
+        sublime.set_timeout(lambda: on_deleted_main_thread(event.src_path), 0)
+
+def on_modified_main_thread(file_path) :
+    if not is_active(file_path) :
+        add_include_to_queue(file_path)
+
+def on_deleted_main_thread(file_path) :
+    if is_active(file_path) :
+            return
+
+    node = nodes.get(file_path)
+    if node is None :
+        return
+
+    node.remove_all_children_and_funcs()
+
+def is_active(file_name) :
+    return sublime.active_window().active_view().file_name() == file_name
+
+class ProcessQueueThread(watchdog.utils.DaemonThread) :
     def run(self) :
-        while True :
-            (view_file_name, view_buffer) = to_process.get()
-            self.process(view_file_name, view_buffer)
+        while self.should_keep_running() :
+            (file_name, view_buffer) = to_process.get()
+            if view_buffer is None :
+                self.process_existing_include(file_name)
+            else :
+                self.process(file_name, view_buffer)
 
     def process(self, view_file_name, view_buffer) :
-        current_node = nodes.get(view_file_name)
-
-        if current_node is None :
-            current_node = Node(view_file_name)
-            nodes[view_file_name] = current_node
+        (current_node, node_added) = get_or_add_node(view_file_name)
 
         base_includes = set()
 
@@ -131,46 +184,63 @@ class ProcessQueueThread(Thread) :
             current_node.remove_child(removed_node)
 
         process_buffer(view_buffer, current_node)
-
-    def load_from_file(self, view_file_name, base_file_name, parent_node, base_node, base_includes) :
-        file_name = self.get_file_name(view_file_name, base_file_name)
-        if file_name is None :
-            print 'Include File Not Found: %s' % base_file_name
+    
+    def process_existing_include(self, file_name) :
+        current_node = nodes.get(file_name)
+        if current_node is None :
             return
 
-        stop = True
-        node = nodes.get(file_name)
-        if node is None :
-            node = Node(file_name)
-            nodes[file_name] = node
-            stop = False
+        base_includes = set()
 
+        with open(file_name, 'r') as f :
+            print 'Processing Include File %s' % file_name
+            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
+
+        for include in includes:
+            self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
+
+        for removed_node in current_node.children.difference(base_includes) :
+            current_node.remove_child(removed_node)
+            
+        process_include_file(current_node)
+
+
+    def load_from_file(self, view_file_name, base_file_name, parent_node, base_node, base_includes) :
+        (file_name, exists) = get_file_name(view_file_name, base_file_name)
+        if not exists :
+            print 'Include File Not Found: %s' % base_file_name
+
+        (node, node_added) = get_or_add_node(file_name)
         parent_node.add_child(node)
 
         if parent_node == base_node :
             base_includes.add(node)
 
-        if stop :
+        if not node_added or not exists:
             return
 
         with open(file_name, 'r') as f :
             print 'Processing Include File %s' % file_name
             includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
-            for include in includes :
-                self.load_from_file(view_file_name, include, node, base_node, base_includes)
+
+        for include in includes :
+            self.load_from_file(view_file_name, include, node, base_node, base_includes)
 
         process_include_file(node)
 
 
-    def get_file_name(self, view_file_name, base_file_name) :
-        os.chdir(os.path.dirname(view_file_name))
-        for dir in search_dirs :
-            file_name = os.path.join(dir, base_file_name + '.inc')
-            if os.path.exists(file_name) :
-                return file_name
+def get_file_name(view_file_name, base_file_name) :
+    file_name = os.path.join(include_dir.get(), base_file_name + '.inc')
+    return (file_name, os.path.exists(file_name))
 
-        return None
+def get_or_add_node( file_name) :
+    node = nodes.get(file_name)
+    if node is None :
+        node = Node(file_name)
+        nodes[file_name] = node
+        return (node, True)
 
+    return (node, False)
 
 class Node :
     def __init__(self, file_name) :
@@ -190,6 +260,11 @@ class Node :
         if len(node.parents) <= 0 :
             nodes.pop(node.file_name)
 
+    def remove_all_children_and_funcs(self) :
+        for child in self.children :
+            self.remove_child(node)
+        self.funcs.clear()
+
 class TextReader:
     def __init__(self, text):
         self.text = text.splitlines()
@@ -205,9 +280,7 @@ class TextReader:
             else :
                 return retval
         else :
-            return ''
-
-        
+            return ''       
 
 DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
@@ -288,9 +361,6 @@ def process_lines(line_reader, node) :
 
         if found_enum :
             (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
-                
-def check_for_function_definition(line_reader, node, buffer) :
-    return
 
 def process_variable(node, buffer) :
     result = ''
@@ -503,3 +573,9 @@ def read_string(buffer, found_comment, brace_level) :
 
     return (result, found_comment, brace_level + result.count('{') - result.count('}'))
 
+
+to_process = OrderedSetQueue()
+nodes = dict() # map files to nodes
+include_dir = StringWrapper()
+file_observer = watchdog.observers.Observer()
+process_thread = ProcessQueueThread()
