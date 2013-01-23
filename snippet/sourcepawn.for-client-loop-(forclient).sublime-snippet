@@ -1,0 +1,9 @@
+<snippet>
+	<description>For Loop Client</description>
+    <content><![CDATA[for (new ${2:x} = 1; $2 <= MaxClients; ${3:$2++})
+{
+	${1:/* code */}
+}]]></content>
+    <tabTrigger>forclient</tabTrigger>
+    <scope>source.sp, source.inc</scope>
+</snippet>

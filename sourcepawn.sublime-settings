@@ -1,0 +1,13 @@
+{
+	"color_scheme": "Packages/SourcePawn/Tubnil.tmTheme",
+	"extensions":
+	[
+		"sp",
+		"inc"
+	],
+	//"font_size": 11,
+	"file_exclude_patterns":
+	[
+		"*.smx"
+	]
+}

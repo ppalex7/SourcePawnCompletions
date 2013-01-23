@@ -1,0 +1,6 @@
+<snippet>
+	<description>#include &lt;filename&gt;</description>
+    <content><![CDATA[include <${1:sourcemod}>]]></content>
+    <tabTrigger>include</tabTrigger>
+    <scope>source.sp, source.inc</scope>
+</snippet>
