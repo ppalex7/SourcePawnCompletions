@@ -60,7 +60,7 @@
 				</dict>
 			</dict>
 			<key>match</key>
-			<string>(\#include)\s+(&lt;|")(.+)(&gt;|")</string>
+			<string>(\#include|\#tryinclude)\s+(&lt;|")(.+)(&gt;|")</string>
 			<key>name</key>
 			<string>keyword.operator.sourcepawn</string>
 		</dict>
