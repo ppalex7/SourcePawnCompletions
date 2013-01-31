@@ -10,11 +10,13 @@ Clone this repository into a subfolder of your Packages directory.
 
 ## Configuration
 
-Create an `SPCompltions.sublime-settings` file in your User directory that looks like:
+Create an `SPCompletions.sublime-settings` file in your User directory that looks like:
 
     {
         "include_directory": "C:\\srcds\\tf\\addons\\sourcemod\\scripting\\include"
     }
+    
+or edit same file in the installed package folder.
 
 The path must be an absolute path. Relative paths are unsupported. 
 
