@@ -1,0 +1,9 @@
+<snippet>
+	<description>Else If Condition</description>
+    <content><![CDATA[else if (${1:/* condition */})
+{
+	${0:/* code */}
+}]]></content>
+    <tabTrigger>elseif</tabTrigger>
+    <scope>source.sp, source.inc</scope>
+</snippet>
