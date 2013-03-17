@@ -57,9 +57,9 @@ try:
 except ImportError:
   import Queue as queue # IGNORE:F0401
 
-from pathtools.path import absolute_path
-from watchdog.utils import DaemonThread
-from watchdog.utils.bricks import OrderedSetQueue as SetQueue
+from Sourcepawn.pathtools.path import absolute_path
+from Sourcepawn.watchdog.utils import DaemonThread
+from Sourcepawn.watchdog.utils.bricks import OrderedSetQueue as SetQueue
 
 DEFAULT_EMITTER_TIMEOUT = 1    # in seconds.
 DEFAULT_OBSERVER_TIMEOUT = 1   # in seconds.
@@ -85,7 +85,7 @@ class ObservedWatch(object):
   """
 
   def __init__(self, path, recursive):
-    self._path = absolute_path(path)
+    self._path = path
     self._is_recursive = recursive
 
   @property
@@ -190,7 +190,7 @@ class EventEmitter(DaemonThread):
       while self.should_keep_running():
         self.queue_events(self.timeout)
     finally:
-      self.on_thread_exit()
+      pass
 
 
 class EventDispatcher(DaemonThread):

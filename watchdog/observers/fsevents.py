@@ -24,7 +24,7 @@
 """
 
 from __future__ import with_statement
-from watchdog.utils import platform
+from Sourcepawn.watchdog.utils import platform
 
 if platform.is_darwin():
   import threading
@@ -32,8 +32,8 @@ if platform.is_darwin():
   import os.path
   import _watchdog_fsevents as _fsevents
 
-  from pathtools.path import absolute_path
-  from watchdog.events import\
+  from Sourcepawn.pathtools.path import absolute_path
+  from Sourcepawn.watchdog.events import\
     FileDeletedEvent,\
     FileModifiedEvent,\
     FileCreatedEvent,\
@@ -43,8 +43,8 @@ if platform.is_darwin():
     DirCreatedEvent,\
     DirMovedEvent,\
     DirMovedEvent
-  from watchdog.utils.dirsnapshot import DirectorySnapshot
-  from watchdog.observers.api import\
+  from Sourcepawn.watchdog.utils.dirsnapshot import DirectorySnapshot
+  from Sourcepawn.watchdog.observers.api import\
     BaseObserver,\
     EventEmitter,\
     DEFAULT_EMITTER_TIMEOUT,\
@@ -140,7 +140,7 @@ if platform.is_darwin():
                             callback,
                             self.pathnames)
         _fsevents.read_events(self)
-      except Exception, e:
+      except Exceptiona as e:
         pass
       finally:
         self.on_thread_exit()

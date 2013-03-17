@@ -16,13 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from watchdog.utils import platform
+from functools import reduce
+from Sourcepawn.watchdog.utils import platform
 
 if platform.is_windows():
   import ctypes
 
-  from watchdog.observers.winapi import\
+  from Sourcepawn.watchdog.observers.winapi import\
     FILE_FLAG_BACKUP_SEMANTICS,\
     FILE_FLAG_OVERLAPPED,\
     FILE_SHARE_READ,\
@@ -46,7 +46,7 @@ if platform.is_windows():
     ReadDirectoryChangesW,\
     CreateIoCompletionPort,\
     CancelIoEx
-  from watchdog.events import\
+  from Sourcepawn.watchdog.events import\
     DirDeletedEvent,\
     DirCreatedEvent,\
     DirModifiedEvent,\
@@ -130,7 +130,7 @@ if platform.is_windows():
     except WindowsError:
       return [], 0
     # get_FILE_NOTIFY_INFORMATION expects nBytes to be long.
-    return event_buffer.raw, long(nbytes.value)
+    return event_buffer.raw, int(nbytes.value)
 
 
   def create_io_completion_port():

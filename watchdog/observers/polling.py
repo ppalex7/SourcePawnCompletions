@@ -34,13 +34,13 @@ from __future__ import with_statement
 import time
 import threading
 
-from watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
-from watchdog.observers.api import\
+from Sourcepawn.watchdog.utils.dirsnapshot import DirectorySnapshot, DirectorySnapshotDiff
+from Sourcepawn.watchdog.observers.api import\
   EventEmitter,\
   BaseObserver,\
   DEFAULT_OBSERVER_TIMEOUT,\
   DEFAULT_EMITTER_TIMEOUT
-from watchdog.events import\
+from Sourcepawn.watchdog.events import\
   DirMovedEvent,\
   DirDeletedEvent,\
   DirCreatedEvent,\

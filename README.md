@@ -1,8 +1,8 @@
-# Sublime SourcePawn Completions
+# SourcePawn Completions for SublimeText 3
 
-A Sublime Text 2 plugin that dynamically genenerates completions for SourcePawn.
+A Sublime Text 3 plugin that dynamically genenerates completions for SourcePawn.
 
-Based off [SourcePawn Snippet Generator by MCPAN](https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19).
+Based on [sublime-sourcepawn](https://github.com/austinwagner/sublime-sourcepawn).
 
 ## Installing
 
@@ -10,17 +10,11 @@ Clone this repository into a subfolder of your Packages directory.
 
 ## Configuration
 
-Create an `SPCompletions.sublime-settings` file in your User directory that looks like:
+1. Copy an `SPCompletions.sublime-settings.example` file to `SPCompletions.sublime-settings` in the package folder, open it and change `include_directory` setting to your path.
+2. Copy an `SourcePawn.sublime-build.example` file to `SourcePawn.sublime-build` in the package folder and edit it to use **Build** feature in SublimeText.
 
-    {
-        "include_directory": "C:\\srcds\\tf\\addons\\sourcemod\\scripting\\include"
-    }
-    
-or edit same file in the installed package folder.
+The path must be an absolute path. Relative paths are unsupported.
 
-The path must be an absolute path. Relative paths are unsupported. 
-
-If you are upgrading from an older version, note that this configuration option has a different name.
 
 ## Usage
 

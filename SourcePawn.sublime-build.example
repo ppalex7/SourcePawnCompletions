@@ -8,7 +8,7 @@
 	// "cmd": ["<spcomp_path>", "-i<include_path>", "-o$file_path/$file_base_name.smx", "$file"],
 	//
 	// Windows example:
-	// "cmd": ["X:/somefolder/spcomp", "-iX:/somefolder", "-o$file_path/$file_base_name.smx", "$file"],
+	// "cmd": ["X:/somefolder/spcomp", "-iX:/somefolder/scripting/include", "-o$file_path/$file_base_name.smx", "$file"],
 	// "cmd": ["X:/game/csgo/addons/sourcemod/scripting/spcomp", "-o$file_path/../plugins/$file_name", "$file"],
 	//
 	// Linux or OSX example:

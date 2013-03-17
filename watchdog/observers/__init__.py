@@ -29,29 +29,49 @@ Classes
    :show-inheritance:
    :inherited-members:
 
+You can also import platform specific classes directly and use it instead
+of :class:`Observer`.  Here is a list of implemented observer classes.:
+
+============== ================================ ==============================
+Class          Platforms                        Note
+============== ================================ ==============================
+|Inotify|      Linux 2.6.13+                    ``inotify(7)`` based observer
+|FSEvents|     Mac OS X                         FSEvents based observer
+|Kqueue|       Mac OS X and BSD with kqueue(2)  ``kqueue(2)`` based observer
+|WinApi|       MS Windows                       Windows API-based observer
+|Polling|      Any                              fallback implementation
+============== ================================ ==============================
+
+.. |Inotify|     replace:: :class:`.inotify.InotifyObserver`
+.. |FSEvents|    replace:: :class:`.fsevents.FSEventsObserver`
+.. |Kqueue|      replace:: :class:`.kqueue.KqueueObserver`
+.. |WinApi|      replace:: :class:`.read_directory_changes.WindowsApiObserver`
+.. |WinApiAsync| replace:: :class:`.read_directory_changes_async.WindowsApiAsyncObserver`
+.. |Polling|     replace:: :class:`.polling.PollingObserver`
+
 """
 
-from watchdog.observers.api import BaseObserver, DEFAULT_OBSERVER_TIMEOUT
+from Sourcepawn.watchdog.observers.api import BaseObserver, DEFAULT_OBSERVER_TIMEOUT
 
 # Ensure FSEvents is checked *before* kqueue here. Mac OS X supports
 # both FSEvents and kqueue, and FSEvents is the preferred way of monitoring
 # file system events on this OS.
 try: # pragma: no cover
-  from watchdog.observers.inotify import InotifyObserver as _Observer
+  from Sourcepawn.watchdog.observers.inotify import InotifyObserver as _Observer
 except ImportError: # pragma: no cover
   try: # pragma: no cover
-    from watchdog.observers.fsevents import FSEventsObserver as _Observer
+    from Sourcepawn.watchdog.observers.fsevents import FSEventsObserver as _Observer
   except ImportError: # pragma: no cover
     try: # pragma: no cover
-      from watchdog.observers.kqueue import KqueueObserver as _Observer
+      from Sourcepawn.watchdog.observers.kqueue import KqueueObserver as _Observer
     except ImportError: # pragma: no cover
       try: # pragma: no cover
-        from watchdog.observers.read_directory_changes_async import WindowsApiAsyncObserver as _Observer
+        from Sourcepawn.watchdog.observers.read_directory_changes_async import WindowsApiAsyncObserver as _Observer
       except ImportError: # pragma: no cover
         try: # pragma: no cover
-          from watchdog.observers.read_directory_changes import WindowsApiObserver as _Observer
-        except ImportError: # pragma: no cover
-          from watchdog.observers.polling import PollingObserver as _Observer
+          from Sourcepawn.watchdog.observers.read_directory_changes import WindowsApiObserver as _Observer
+        except (ImportError, AttributeError): # pragma: no cover
+          from Sourcepawn.watchdog.observers.polling import PollingObserver as _Observer
 
 
 Observer = _Observer

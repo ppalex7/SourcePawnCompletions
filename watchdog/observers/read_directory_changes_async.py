@@ -21,8 +21,8 @@ from __future__ import with_statement
 
 raise ImportError("Not implemented yet.")
 
-from watchdog.utils import platform
-from watchdog.events import FileDeletedEvent, FileModifiedEvent,\
+from Sourcepawn.watchdog.utils import platform
+from Sourcepawn.watchdog.events import FileDeletedEvent, FileModifiedEvent,\
   FileCreatedEvent, FileMovedEvent, DirDeletedEvent, DirModifiedEvent,\
   DirCreatedEvent, DirMovedEvent
 
@@ -30,9 +30,9 @@ if platform.is_windows():
   import threading
   import time
 
-  from watchdog.observers.winapi_common import\
+  from Sourcepawn.watchdog.observers.winapi_common import\
     read_directory_changes
-  from watchdog.observers.api import\
+  from Sourcepawn.watchdog.observers.api import\
     EventQueue,\
     EventEmitter,\
     BaseObserver,\
