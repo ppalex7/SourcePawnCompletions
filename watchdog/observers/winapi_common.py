@@ -17,12 +17,12 @@
 # limitations under the License.
 
 from functools import reduce
-from watchdog.utils import platform
+from Sourcepawn.watchdog.utils import platform
 
 if platform.is_windows():
   import ctypes
 
-  from watchdog.observers.winapi import\
+  from Sourcepawn.watchdog.observers.winapi import\
     FILE_FLAG_BACKUP_SEMANTICS,\
     FILE_FLAG_OVERLAPPED,\
     FILE_SHARE_READ,\
@@ -46,7 +46,7 @@ if platform.is_windows():
     ReadDirectoryChangesW,\
     CreateIoCompletionPort,\
     CancelIoEx
-  from watchdog.events import\
+  from Sourcepawn.watchdog.events import\
     DirDeletedEvent,\
     DirCreatedEvent,\
     DirModifiedEvent,\

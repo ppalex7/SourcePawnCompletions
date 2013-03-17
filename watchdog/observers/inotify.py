@@ -68,7 +68,7 @@ Some extremely useful articles and documentation:
 """
 
 from __future__ import with_statement
-from watchdog.utils import platform
+from Sourcepawn.watchdog.utils import platform
 
 if platform.is_linux():
   import os
@@ -81,17 +81,17 @@ if platform.is_linux():
     c_char_p,\
     c_uint32
 
-  from pathtools.path import absolute_path
+  from Sourcepawn.pathtools.path import absolute_path
 
-  from watchdog.utils import\
+  from Sourcepawn.watchdog.utils import\
     has_attribute,\
     ctypes_find_library
-  from watchdog.observers.api import\
+  from Sourcepawn.watchdog.observers.api import\
     EventEmitter,\
     BaseObserver,\
     DEFAULT_EMITTER_TIMEOUT,\
     DEFAULT_OBSERVER_TIMEOUT
-  from watchdog.events import\
+  from Sourcepawn.watchdog.events import\
     DirDeletedEvent,\
     DirModifiedEvent,\
     DirMovedEvent,\
@@ -539,7 +539,7 @@ if platform.is_linux():
           if e.errno == errno.EINTR:
             continue
         break
-      
+
       with self._lock:
         event_list = []
         for wd, mask, cookie, name in Inotify._parse_event_buffer(event_buffer):

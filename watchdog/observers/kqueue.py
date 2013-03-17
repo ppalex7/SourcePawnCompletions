@@ -78,7 +78,7 @@ Collections and Utility Classes
 """
 
 from __future__ import with_statement
-from watchdog.utils import\
+from Sourcepawn.watchdog.utils import\
   platform #, has_attribute
 
 if platform.is_bsd() or platform.is_darwin():
@@ -96,15 +96,15 @@ if platform.is_bsd() or platform.is_darwin():
   else:
     import select
 
-  from pathtools.path import absolute_path
+  from Sourcepawn.pathtools.path import absolute_path
 
-  from watchdog.observers.api import\
+  from Sourcepawn.watchdog.observers.api import\
     BaseObserver,\
     EventEmitter,\
     DEFAULT_OBSERVER_TIMEOUT,\
     DEFAULT_EMITTER_TIMEOUT
-  from watchdog.utils.dirsnapshot import DirectorySnapshot
-  from watchdog.events import\
+  from Sourcepawn.watchdog.utils.dirsnapshot import DirectorySnapshot
+  from Sourcepawn.watchdog.events import\
     DirMovedEvent,\
     DirDeletedEvent,\
     DirCreatedEvent,\

@@ -56,10 +56,10 @@ import os
 import sys
 import stat
 
-from pathtools.path import walk as path_walk, absolute_path
+from Sourcepawn.pathtools.path import walk as path_walk, absolute_path
 
 if sys.version_info >= (2, 6, 0):
-  from watchdog.utils.bricks import OrderedSet as set
+  from Sourcepawn.watchdog.utils.bricks import OrderedSet as set
 
 class DirectorySnapshotDiff(object):
   """
