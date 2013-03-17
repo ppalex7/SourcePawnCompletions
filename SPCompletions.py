@@ -17,7 +17,8 @@ import os
 import string
 from collections import defaultdict
 from threading import Timer, Thread
-from Queue import *
+from queue import *
+
 import watchdog
 import watchdog.events
 import watchdog.observers
@@ -32,6 +33,9 @@ class StringWrapper :
     def get(self) :
         return self.value
 
+def plugin_loaded() :
+    load_include_dir(True)
+
 def unload_handler() :
     file_observer.stop()
     process_thread.stop()
@@ -43,8 +47,14 @@ class SPCompletions(sublime_plugin.EventListener):
         process_thread.start()
         self.delay_queue = None
         file_observer.start()
-        self.file_event_handler = IncludeFileEventHandler()
-        self.load_include_dir(True)
+
+    def on_activated(self, view) :
+        if not self.is_sourcepawn_file(view):
+            return
+        if not view.file_name() :
+            return
+        if not view.file_name() in nodes :
+            add_to_queue(view)
 
     def on_modified(self, view) :
         self.add_to_queue_delayed(view)
@@ -73,7 +83,7 @@ class SPCompletions(sublime_plugin.EventListener):
 
     def is_sourcepawn_file(self, view) :
         return view.file_name() is not None and view.match_selector(0, 'source.sp') or view.match_selector(0, 'source.inc')
-        
+
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], 'source.sp -string -comment -constant') \
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
@@ -84,6 +94,7 @@ class SPCompletions(sublime_plugin.EventListener):
     def generate_funcset(self, file_name) :
         funcset = set()
         visited = set()
+
         node = nodes[file_name]
 
         self.generate_funcset_recur(node, funcset, visited)
@@ -92,32 +103,34 @@ class SPCompletions(sublime_plugin.EventListener):
     def generate_funcset_recur(self, node, funcset, visited) :
         if node in visited :
             return
-        
+
         visited.add(node)
         for child in node.children :
             self.generate_funcset_recur(child, funcset, visited)
 
         funcset.update(node.funcs)
 
-    def load_include_dir(self, register_callback = False) :
-        settings = sublime.load_settings('SPCompletions.sublime-settings')
-        if register_callback :
-            settings.add_on_change('SPCompletions', self.on_settings_modified)
+def on_settings_modified() :
+    load_include_dir()
 
-        include_dir.set(settings.get('include_directory', '.'))
-        if not os.path.isabs(include_dir.get()) :
-            raise exception.RuntimeException()
+def load_include_dir(register_callback = False) :
+    settings = sublime.load_settings('SPCompletions.sublime-settings')
+    if register_callback :
+        settings.add_on_change('SPCompletions', on_settings_modified)
 
-        file_observer.unschedule_all()
-        file_observer.schedule(self.file_event_handler, include_dir.get(), True)
+    include_dir.set(settings.get('include_directory', '.'))
 
-    def on_settings_modified(self) :
-        self.load_include_dir()
+    if not os.path.isabs(str(include_dir.get())) :
+        # print(str(include_dir.get()))
+        raise RuntimeError
 
-def sorted_nicely( l ): 
-    """ Sort the given iterable in the way that humans expect.""" 
-    convert = lambda text: int(text) if text.isdigit() else text 
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key[0]) ] 
+    file_observer.unschedule_all()
+    file_observer.schedule(file_event_handler, include_dir.get(), True)
+
+def sorted_nicely( l ):
+    """ Sort the given iterable in the way that humans expect."""
+    convert = lambda text: int(text) if text.isdigit() else text
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key[0]) ]
     return sorted(l, key = alphanum_key)
 
 def add_to_queue_forward(view) :
@@ -184,7 +197,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread) :
             current_node.remove_child(removed_node)
 
         process_buffer(view_buffer, current_node)
-    
+
     def process_existing_include(self, file_name) :
         current_node = nodes.get(file_name)
         if current_node is None :
@@ -193,7 +206,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread) :
         base_includes = set()
 
         with open(file_name, 'r') as f :
-            print 'Processing Include File %s' % file_name
+            print ('Processing Include File %s' % file_name)
             includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
 
         for include in includes:
@@ -201,14 +214,14 @@ class ProcessQueueThread(watchdog.utils.DaemonThread) :
 
         for removed_node in current_node.children.difference(base_includes) :
             current_node.remove_child(removed_node)
-            
+
         process_include_file(current_node)
 
 
     def load_from_file(self, view_file_name, base_file_name, parent_node, base_node, base_includes) :
         (file_name, exists) = get_file_name(view_file_name, base_file_name)
         if not exists :
-            print 'Include File Not Found: %s' % base_file_name
+            print ('Include File Not Found: %s' % base_file_name)
 
         (node, node_added) = get_or_add_node(file_name)
         parent_node.add_child(node)
@@ -220,7 +233,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread) :
             return
 
         with open(file_name, 'r') as f :
-            print 'Processing Include File %s' % file_name
+            print ('Processing Include File %s' % file_name)
             includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
 
         for include in includes :
@@ -272,7 +285,7 @@ class TextReader:
 
     def readline(self) :
         self.position += 1
-        
+
         if self.position < len(self.text) :
             retval = self.text[self.position]
             if retval == '' :
@@ -280,14 +293,14 @@ class TextReader:
             else :
                 return retval
         else :
-            return ''       
+            return ''
 
 DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
     "native Float:operator/",
     "native Float:operator+",
     "native Float:operator-",
-    "stock Float:operator*", 
+    "stock Float:operator*",
     "stock Float:operator/",
     "stock Float:operator+",
     "stock Float:operator-",
@@ -303,7 +316,7 @@ docs = dict() # map function name to documentation
 included_files = defaultdict(set) # map project files to included files
 funcs = defaultdict(list) # map include files to functions
 
-# Code after this point adapted from 
+# Code after this point adapted from
 # https://forums.alliedmods.net/showpost.php?p=1866026&postcount=19
 # Credit to MCPAN (mcpan@foxmail.com)
 def read_line(file) :
@@ -328,12 +341,12 @@ def process_lines(line_reader, node) :
     found_comment = False
     found_enum = False
     brace_level = 0
-    
+
     while True :
         buffer = read_line(line_reader)
 
         if buffer is None :
-            break 
+            break
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
         if len(buffer) <= 0 :
             continue
@@ -408,7 +421,7 @@ def process_enum(node, buffer, enum_contents, found_enum) :
     if not found_enum :
         pos = enum_contents.find('{')
         enum_contents = enum_contents[pos + 1:]
-        
+
         for c in enum_contents :
             if c == '=' :
                 ignore = True
@@ -437,7 +450,7 @@ def process_enum(node, buffer, enum_contents, found_enum) :
 
 def get_preprocessor_define(node, buffer) :
     """get_preprocessor_define(File, string) -> string"""
-    # Regex the #define. Group 1 is the name, Group 2 is the value 
+    # Regex the #define. Group 1 is the name, Group 2 is the value
     define = re.search('#define[\\s]+([^\\s]+)[\\s]+(.+)', buffer)
     if define :
         # The whole line is consumed, return an empty string to indicate that
@@ -517,7 +530,7 @@ def process_function_string(node, func, is_native) :
         params = []
     else :
         params = remaining.strip()[:-1].split(',')
-    
+
     autocomplete = funcname + '('
     i = 1
     for param in params :
@@ -573,9 +586,9 @@ def read_string(buffer, found_comment, brace_level) :
 
     return (result, found_comment, brace_level + result.count('{') - result.count('}'))
 
-
 to_process = OrderedSetQueue()
 nodes = dict() # map files to nodes
 include_dir = StringWrapper()
 file_observer = watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
+file_event_handler = IncludeFileEventHandler()
