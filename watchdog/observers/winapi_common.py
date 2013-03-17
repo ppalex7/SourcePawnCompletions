@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+from functools import reduce
 from watchdog.utils import platform
 
 if platform.is_windows():
@@ -130,7 +130,7 @@ if platform.is_windows():
     except WindowsError:
       return [], 0
     # get_FILE_NOTIFY_INFORMATION expects nBytes to be long.
-    return event_buffer.raw, long(nbytes.value)
+    return event_buffer.raw, int(nbytes.value)
 
 
   def create_io_completion_port():

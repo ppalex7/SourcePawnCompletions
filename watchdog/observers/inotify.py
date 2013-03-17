@@ -72,6 +72,7 @@ from watchdog.utils import platform
 
 if platform.is_linux():
   import os
+  import errno
   import struct
   import threading
   import ctypes
@@ -531,15 +532,22 @@ if platform.is_linux():
       """
       Reads events from inotify and yields them.
       """
-      event_buffer = os.read(self._inotify_fd, event_buffer_size)
+      while True:
+        try:
+          event_buffer = os.read(self._inotify_fd, event_buffer_size)
+        except OSError as e:
+          if e.errno == errno.EINTR:
+            continue
+        break
+      
       with self._lock:
         event_list = []
-        for wd, mask, cookie, name in Inotify._parse_event_buffer(
-          event_buffer):
+        for wd, mask, cookie, name in Inotify._parse_event_buffer(event_buffer):
+          if wd == -1:
+            continue
           wd_path = self._path_for_wd[wd]
           src_path = absolute_path(os.path.join(wd_path, name))
-          inotify_event = InotifyEvent(wd, mask, cookie, name,
-                                       src_path)
+          inotify_event = InotifyEvent(wd, mask, cookie, name, src_path)
 
           if inotify_event.is_moved_from:
             self.remember_move_from_event(inotify_event)
@@ -552,8 +560,7 @@ if platform.is_linux():
               self._wd_for_path[inotify_event.src_path] = moved_wd
               self._path_for_wd[moved_wd] = inotify_event.src_path
             src_path = absolute_path(os.path.join(wd_path, name))
-            inotify_event = InotifyEvent(wd, mask, cookie, name,
-                                         src_path)
+            inotify_event = InotifyEvent(wd, mask, cookie, name, src_path)
 
           if inotify_event.is_ignored:
           # Clean up book-keeping for deleted watches.

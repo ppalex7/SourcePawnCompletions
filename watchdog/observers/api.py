@@ -85,7 +85,7 @@ class ObservedWatch(object):
   """
 
   def __init__(self, path, recursive):
-    self._path = absolute_path(path)
+    self._path = path
     self._is_recursive = recursive
 
   @property
@@ -190,7 +190,7 @@ class EventEmitter(DaemonThread):
       while self.should_keep_running():
         self.queue_events(self.timeout)
     finally:
-      self.on_thread_exit()
+      pass
 
 
 class EventDispatcher(DaemonThread):
