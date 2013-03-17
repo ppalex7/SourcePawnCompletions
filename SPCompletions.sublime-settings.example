@@ -1,4 +1,4 @@
 {
-    "include_directory": "C:\\",
+    "include_directory": "C:\\Path\\to\\your\\sourcemod\\scripting\\include\\",
     "live_refresh_delay": 1.0
 }
