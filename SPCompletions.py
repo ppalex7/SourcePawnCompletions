@@ -188,7 +188,7 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
         base_includes = set()
 
-        includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', view_buffer, re.MULTILINE)
+        includes = includes_re.findall(view_buffer)
 
         for include in includes:
             self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
@@ -207,7 +207,7 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
         with open(file_name, 'r') as f :
             print ('Processing Include File %s' % file_name)
-            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
+            includes = include_re.findall(f.read())
 
         for include in includes:
             self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
@@ -234,7 +234,7 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
         with open(file_name, 'r') as f :
             print ('Processing Include File %s' % file_name)
-            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
+            includes = re.findall('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', f.read(), re.MULTILINE)
 
         for include in includes :
             self.load_from_file(view_file_name, include, node, base_node, base_includes)
@@ -243,7 +243,11 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
 
 def get_file_name(view_file_name, base_file_name) :
-    file_name = os.path.join(include_dir.get(), base_file_name + '.inc')
+    if local_re.search(base_file_name) == None:
+        file_name = os.path.join(include_dir.get(), base_file_name + '.inc')
+    else:
+        file_name = os.path.join(os.path.dirname(view_file_name), base_file_name)
+
     return (file_name, os.path.exists(file_name))
 
 def get_or_add_node( file_name) :
@@ -592,3 +596,5 @@ include_dir = StringWrapper()
 file_observer = Sourcepawn.watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
 file_event_handler = IncludeFileEventHandler()
+includes_re = re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
+local_re = re.compile('\\.(sp|inc)$')
