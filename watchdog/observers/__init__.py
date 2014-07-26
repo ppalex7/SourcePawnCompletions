@@ -28,6 +28,9 @@ Classes
    :members:
    :show-inheritance:
    :inherited-members:
+   
+Observer thread that schedules watching directories and dispatches
+calls to event handlers.
 
 You can also import platform specific classes directly and use it instead
 of :class:`Observer`.  Here is a list of implemented observer classes.:
@@ -51,31 +54,30 @@ Class          Platforms                        Note
 
 """
 
-from watchdog.observers.api import BaseObserver, DEFAULT_OBSERVER_TIMEOUT
+import warnings
+from watchdog.utils import platform
 
-# Ensure FSEvents is checked *before* kqueue here. Mac OS X supports
-# both FSEvents and kqueue, and FSEvents is the preferred way of monitoring
-# file system events on this OS.
-try: # pragma: no cover
-  from watchdog.observers.inotify import InotifyObserver as _Observer
-except ImportError: # pragma: no cover
-  try: # pragma: no cover
-    from watchdog.observers.fsevents import FSEventsObserver as _Observer
-  except ImportError: # pragma: no cover
-    try: # pragma: no cover
-      from watchdog.observers.kqueue import KqueueObserver as _Observer
-    except ImportError: # pragma: no cover
-      try: # pragma: no cover
-        from watchdog.observers.read_directory_changes_async import WindowsApiAsyncObserver as _Observer
-      except ImportError: # pragma: no cover
-        try: # pragma: no cover
-          from watchdog.observers.read_directory_changes import WindowsApiObserver as _Observer
-        except (ImportError, AttributeError): # pragma: no cover
-          from watchdog.observers.polling import PollingObserver as _Observer
+if platform.is_linux():
+    from .inotify import InotifyObserver as Observer
 
+elif platform.is_darwin():
+    try:
+        from .fsevents import FSEventsObserver as Observer
+    except:
+        from .kqueue import KqueueObserver as Observer
+        warnings.warn("Failed to import fsevents. Fall back to kqueue")
 
-Observer = _Observer
-"""
-Observer thread that schedules watching directories and dispatches
-calls to event handlers.
-"""
+elif platform.is_bsd():
+    from .kqueue import KqueueObserver as Observer
+
+elif platform.is_windows():
+    # TODO: find a reliable way of checking Windows version and import
+    # polling explicitly for Windows XP
+    try:
+        from .read_directory_changes import WindowsApiObserver as Observer
+    except:
+        from .polling import PollingObserver as Observer
+        warnings.warn("Failed to import read_directory_changes. Fall back to polling.")
+
+else:
+    from .polling import PollingObserver as Observer
