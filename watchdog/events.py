@@ -89,9 +89,9 @@ import os.path
 import logging
 import re
 
-from Sourcepawn.pathtools.path import absolute_path
-from Sourcepawn.pathtools.patterns import match_any_paths
-from Sourcepawn.watchdog.utils import has_attribute
+from pathtools.path import absolute_path
+from pathtools.patterns import match_any_paths
+from watchdog.utils import has_attribute
 
 
 EVENT_TYPE_MOVED = 'moved'

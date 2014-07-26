@@ -19,11 +19,10 @@ from collections import defaultdict
 from threading import Timer, Thread
 from queue import *
 
-# import Sourcepawn.watchdog
-import Sourcepawn.watchdog.events
-import Sourcepawn.watchdog.observers
-import Sourcepawn.watchdog.utils
-from Sourcepawn.watchdog.utils.bricks import OrderedSetQueue
+import watchdog.events
+import watchdog.observers
+import watchdog.utils
+from watchdog.utils.bricks import OrderedSetQueue
 
 class StringWrapper :
     def __init__(self) :
@@ -144,9 +143,9 @@ def add_to_queue(view) :
 def add_include_to_queue(file_name) :
     to_process.put((file_name, None))
 
-class IncludeFileEventHandler(Sourcepawn.watchdog.events.FileSystemEventHandler) :
+class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler) :
     def __init__(self) :
-        Sourcepawn.watchdog.events.FileSystemEventHandler.__init__(self)
+        watchdog.events.FileSystemEventHandler.__init__(self)
 
     def on_created(self, event) :
         sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
@@ -174,7 +173,7 @@ def on_deleted_main_thread(file_path) :
 def is_active(file_name) :
     return sublime.active_window().active_view().file_name() == file_name
 
-class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
+class ProcessQueueThread(watchdog.utils.DaemonThread) :
     def run(self) :
         while self.should_keep_running() :
             (file_name, view_buffer) = to_process.get()
@@ -593,7 +592,7 @@ def read_string(buffer, found_comment, brace_level) :
 to_process = OrderedSetQueue()
 nodes = dict() # map files to nodes
 include_dir = StringWrapper()
-file_observer = Sourcepawn.watchdog.observers.Observer()
+file_observer = watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
 file_event_handler = IncludeFileEventHandler()
 includes_re = re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
