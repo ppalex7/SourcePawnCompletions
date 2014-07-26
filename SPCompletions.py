@@ -15,10 +15,12 @@ import sublime, sublime_plugin
 import re
 import os
 import string
+import sys
 from collections import defaultdict
 from threading import Timer, Thread
 from queue import *
 
+sys.path.insert(0, os.path.dirname(__file__))
 import watchdog.events
 import watchdog.observers
 import watchdog.utils
