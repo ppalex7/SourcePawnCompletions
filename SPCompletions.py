@@ -11,14 +11,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import sublime, sublime_plugin
-import re
 import os
+import re
 import string
 import sys
+import sublime, sublime_plugin
 from collections import defaultdict
-from threading import Timer, Thread
 from queue import *
+from threading import Timer, Thread
 
 sys.path.insert(0, os.path.dirname(__file__))
 import watchdog.events
