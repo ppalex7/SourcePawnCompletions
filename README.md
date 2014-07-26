@@ -3,6 +3,7 @@
 A Sublime Text 3 plugin that dynamically genenerates completions for SourcePawn.
 
 Based on [sublime-sourcepawn](https://github.com/austinwagner/sublime-sourcepawn).
+Includes [watchdog python module](https://https://github.com/gorakhargosh/watchdog)
 
 ## Installing
 
