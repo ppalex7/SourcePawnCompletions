@@ -21,8 +21,8 @@ import signal
 import subprocess
 import time
 
-from Sourcepawn.watchdog.utils import echo, has_attribute
-from Sourcepawn.watchdog.events import PatternMatchingEventHandler
+from watchdog.utils import echo, has_attribute
+from watchdog.events import PatternMatchingEventHandler
 
 
 class Trick(PatternMatchingEventHandler):

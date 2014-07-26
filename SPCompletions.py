@@ -15,15 +15,16 @@ import sublime, sublime_plugin
 import re
 import os
 import string
+import sys
 from collections import defaultdict
 from threading import Timer, Thread
 from queue import *
 
-# import Sourcepawn.watchdog
-import Sourcepawn.watchdog.events
-import Sourcepawn.watchdog.observers
-import Sourcepawn.watchdog.utils
-from Sourcepawn.watchdog.utils.bricks import OrderedSetQueue
+sys.path.insert(0, os.path.dirname(__file__))
+import watchdog.events
+import watchdog.observers
+import watchdog.utils
+from watchdog.utils.bricks import OrderedSetQueue
 
 class StringWrapper :
     def __init__(self) :
@@ -144,9 +145,9 @@ def add_to_queue(view) :
 def add_include_to_queue(file_name) :
     to_process.put((file_name, None))
 
-class IncludeFileEventHandler(Sourcepawn.watchdog.events.FileSystemEventHandler) :
+class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler) :
     def __init__(self) :
-        Sourcepawn.watchdog.events.FileSystemEventHandler.__init__(self)
+        watchdog.events.FileSystemEventHandler.__init__(self)
 
     def on_created(self, event) :
         sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
@@ -174,7 +175,7 @@ def on_deleted_main_thread(file_path) :
 def is_active(file_name) :
     return sublime.active_window().active_view().file_name() == file_name
 
-class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
+class ProcessQueueThread(watchdog.utils.DaemonThread) :
     def run(self) :
         while self.should_keep_running() :
             (file_name, view_buffer) = to_process.get()
@@ -188,7 +189,7 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
         base_includes = set()
 
-        includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', view_buffer, re.MULTILINE)
+        includes = includes_re.findall(view_buffer)
 
         for include in includes:
             self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
@@ -207,7 +208,7 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
         with open(file_name, 'r') as f :
             print ('Processing Include File %s' % file_name)
-            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
+            includes = include_re.findall(f.read())
 
         for include in includes:
             self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
@@ -234,7 +235,7 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
         with open(file_name, 'r') as f :
             print ('Processing Include File %s' % file_name)
-            includes = re.findall('^[\\s]*#include[\\s]+<([^>]+)>', f.read(), re.MULTILINE)
+            includes = re.findall('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', f.read(), re.MULTILINE)
 
         for include in includes :
             self.load_from_file(view_file_name, include, node, base_node, base_includes)
@@ -243,7 +244,11 @@ class ProcessQueueThread(Sourcepawn.watchdog.utils.DaemonThread) :
 
 
 def get_file_name(view_file_name, base_file_name) :
-    file_name = os.path.join(include_dir.get(), base_file_name + '.inc')
+    if local_re.search(base_file_name) == None:
+        file_name = os.path.join(include_dir.get(), base_file_name + '.inc')
+    else:
+        file_name = os.path.join(os.path.dirname(view_file_name), base_file_name)
+
     return (file_name, os.path.exists(file_name))
 
 def get_or_add_node( file_name) :
@@ -589,6 +594,8 @@ def read_string(buffer, found_comment, brace_level) :
 to_process = OrderedSetQueue()
 nodes = dict() # map files to nodes
 include_dir = StringWrapper()
-file_observer = Sourcepawn.watchdog.observers.Observer()
+file_observer = watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
 file_event_handler = IncludeFileEventHandler()
+includes_re = re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
+local_re = re.compile('\\.(sp|inc)$')

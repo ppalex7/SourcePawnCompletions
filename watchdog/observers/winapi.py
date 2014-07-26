@@ -37,7 +37,7 @@
 
 
 from __future__ import with_statement
-from Sourcepawn.watchdog.utils import platform
+from watchdog.utils import platform
 
 
 if platform.is_windows():

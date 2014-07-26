@@ -18,7 +18,7 @@
 
 
 from __future__ import with_statement
-from Sourcepawn.watchdog.utils import platform
+from watchdog.utils import platform
 
 if platform.is_windows():
   import ctypes
@@ -26,8 +26,8 @@ if platform.is_windows():
   import os.path
   import time
 
-  from Sourcepawn.pathtools.path import absolute_path
-  from Sourcepawn.watchdog.observers.winapi_common import\
+  from pathtools.path import absolute_path
+  from watchdog.observers.winapi_common import\
     DIR_ACTION_EVENT_MAP,\
     FILE_ACTION_EVENT_MAP,\
     WATCHDOG_FILE_FLAGS,\
@@ -36,16 +36,16 @@ if platform.is_windows():
     get_directory_handle,\
     close_directory_handle,\
     BUFFER_SIZE
-  from Sourcepawn.watchdog.observers.winapi import\
+  from watchdog.observers.winapi import\
     FILE_ACTION_RENAMED_OLD_NAME,\
     FILE_ACTION_RENAMED_NEW_NAME,\
     get_FILE_NOTIFY_INFORMATION
-  from Sourcepawn.watchdog.observers.api import\
+  from watchdog.observers.api import\
     EventEmitter,\
     BaseObserver,\
     DEFAULT_OBSERVER_TIMEOUT,\
     DEFAULT_EMITTER_TIMEOUT
-  from Sourcepawn.watchdog.events import\
+  from watchdog.events import\
     DirMovedEvent,\
     FileMovedEvent
 

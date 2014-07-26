@@ -68,7 +68,7 @@ Some extremely useful articles and documentation:
 """
 
 from __future__ import with_statement
-from Sourcepawn.watchdog.utils import platform
+from watchdog.utils import platform
 
 if platform.is_linux():
   import os
@@ -81,17 +81,17 @@ if platform.is_linux():
     c_char_p,\
     c_uint32
 
-  from Sourcepawn.pathtools.path import absolute_path
+  from pathtools.path import absolute_path
 
-  from Sourcepawn.watchdog.utils import\
+  from watchdog.utils import\
     has_attribute,\
     ctypes_find_library
-  from Sourcepawn.watchdog.observers.api import\
+  from watchdog.observers.api import\
     EventEmitter,\
     BaseObserver,\
     DEFAULT_EMITTER_TIMEOUT,\
     DEFAULT_OBSERVER_TIMEOUT
-  from Sourcepawn.watchdog.events import\
+  from watchdog.events import\
     DirDeletedEvent,\
     DirModifiedEvent,\
     DirMovedEvent,\
