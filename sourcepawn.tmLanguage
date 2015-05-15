@@ -149,7 +149,7 @@
 		</dict>
 		<dict>
 			<key>match</key>
-			<string>(\b)(for|if|else|do|while|switch|case|default|return|break|continue|new|decl|public|stock|const|forward|static|funcenum|functag|native)(\b)</string>
+			<string>(\b)(for|if|else|do|while|switch|case|default|return|break|continue|new|decl|public|stock|const|forward|static|funcenum|functag|native|float|int|bool|_|int|char|void)(\b)</string>
 			<key>name</key>
 			<string>declaration.tag.sourcepawn</string>
 		</dict>
