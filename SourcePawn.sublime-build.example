@@ -18,4 +18,14 @@
 	//
 	// "file_regex": "(.*)\\((\\d+)\\) :",
 	// "selector": "source.sp"
+	
+	//working windows example (by iNilo)
+	//uncomment to make it work (ajust the path)
+	//"working_dir": "${project_path:${folder}}",
+	//"shell": true,
+	//"cmd": ["C:\\sourcemod\\scripting\\spcomp", "-iC:\\sourcemod\\scripting\\include", "-oC:\\sourcemod\\plugins\\/$file_base_name.smx", "$file"],
+	//"file_regex": "(.*)\\((\\d+)\\) :",
+	//"selector": "source.sp"
+}
+
 }
