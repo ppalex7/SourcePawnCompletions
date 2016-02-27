@@ -1,4 +1,5 @@
 {
+	// Ajust path to spcomp.
 	// Remove // make build-system effective.
 	//
 	// For default sourcemod scripting directory :
