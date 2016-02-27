@@ -16,6 +16,6 @@
 	// "cmd": ["/home/User/game/csgo/addons/sourcemod/scripting/spcomp", "-o$file_path/../plugins/$file_name", "$file"],
 	//
 	//
-	// "file_regex": "(.*)\\((\\d+)\\) :",
-	// "selector": "source.sp"
+	"file_regex": "(.*)\\((\\d+)\\) :",
+	"selector": "source.sp"
 }
