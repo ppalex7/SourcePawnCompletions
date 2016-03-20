@@ -1,4 +1,8 @@
 {
-    "include_directory": "C:\\Path\\to\\your\\sourcemod\\scripting\\include\\",
+    // path to sourcemod "scripting/include" folder
+    // Windows example: "D:\\sourcemod\\scripting\\include"
+    // OSX example: "/Users/ppalex/sourcemod/scripting/include"
+    "include_directory": "C:\\Path\\to\\your\\sourcemod\\scripting\\include",
+    // delay (in seconds) before regenerating auto-completion snippets
     "live_refresh_delay": 1.0
 }
