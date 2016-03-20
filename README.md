@@ -20,6 +20,7 @@ Clone this repository into a subfolder of your Packages directory:
 
 ## Configuration
 **Note:** All paths must be an absolute. Relative paths are unsupported.
+**Note:** Changed settings may lost during package upgrade.
 
 1. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Auto-completion settings*.
 2. Change `include_directory` setting to your path with SourceMod include files.
