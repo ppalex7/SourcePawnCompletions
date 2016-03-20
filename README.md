@@ -7,7 +7,16 @@ Includes [watchdog python module](https://https://github.com/gorakhargosh/watchd
 
 ## Installing
 
-Clone this repository into a subfolder of your Packages directory.
+### Via package control
+
+1. **Package control: Add repository**, enter `http://s.ppalex.com/packagecontrol/packages.json`
+2. **Package control: Install package**, enter *SourcePawn Completions*
+
+### Manually
+
+Clone this repository into a subfolder of your Packages directory:
+* Mac OS `~/Library/Application Support/Sublime Text 3/Packages/`
+* Windows `%APPDATA%/Sublime Text 3/Packages/`
 
 ## Configuration
 
