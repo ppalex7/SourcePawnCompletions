@@ -19,12 +19,14 @@ Clone this repository into a subfolder of your Packages directory:
 * Windows `%APPDATA%/Sublime Text 3/Packages/`
 
 ## Configuration
+**Note:** All paths must be an absolute. Relative paths are unsupported.
 
-1. Copy an `SPCompletions.sublime-settings.example` file to `SPCompletions.sublime-settings` in the package folder, open it and change `include_directory` setting to your path.
-2. Copy an `SourcePawn.sublime-build.example` file to `SourcePawn.sublime-build` in the package folder and edit it to use **Build** feature in SublimeText.
-
-The path must be an absolute path. Relative paths are unsupported.
-
+1. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Auto-completion settings*.
+2. Change `include_directory` setting to your path with SourceMod include files.
+3. Save and close file.
+4. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Build settings*.
+5. Uncomment one of `cmd` settings and ajust path to `spcomp`. This allows you to use **Build** feature in SublimeText.
+6. Save and close file.
 
 ## Usage
 
