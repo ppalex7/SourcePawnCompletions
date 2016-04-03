@@ -59,6 +59,9 @@ class SPCompletions(sublime_plugin.EventListener):
         if not view.file_name() in nodes :
             add_to_queue(view)
 
+    def on_activated_async(self, view):
+        _save_user_settings()
+
     def on_modified(self, view) :
         self.add_to_queue_delayed(view)
 
@@ -151,6 +154,12 @@ def add_to_queue(view) :
 
 def add_include_to_queue(file_name) :
     to_process.put((file_name, None))
+
+def _save_user_settings():
+    settings = _get_settings()
+    if not settings.get('bootstrapped'):
+        settings.set('bootstrapped', True)
+        sublime.save_settings(_settings_filename())
 
 class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler) :
     def __init__(self) :
