@@ -18,7 +18,12 @@
                             {
                                 "command": "open_file",
                                 "args": {"file": "${packages}/SourcePawn Completions/SourcePawn Completions.sublime-settings"},
-                                "caption": "Auto-completion settings"
+                                "caption": "Settings - Default"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/User/SourcePawn Completions.sublime-settings"},
+                                "caption": "Settings - User"
                             },
                             { "caption": "-" },
                             {
