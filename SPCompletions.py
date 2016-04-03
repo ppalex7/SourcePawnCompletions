@@ -42,6 +42,8 @@ def unload_handler() :
     process_thread.stop()
     # Get process_thread to stop by adding something to the queue
     to_process.put(('', ''))
+    # remove callback
+    _get_settings().clear_on_change('SourcePawn Completions')
 
 class SPCompletions(sublime_plugin.EventListener):
     def __init__(self) :
