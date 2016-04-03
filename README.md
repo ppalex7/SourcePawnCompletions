@@ -20,10 +20,9 @@ Clone this repository into a subfolder of your Packages directory:
 
 ## Configuration
 **Note:** All paths must be an absolute. Relative paths are unsupported.
-**Note:** Changed settings may lost during package upgrade.
 
-1. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Auto-completion settings*.
-2. Change `include_directory` setting to your path with SourceMod include files.
+1. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Settings - User*.
+2. Add `include_directory` setting with path to your SourceMod include files (`sourcemod/scripting` folder). (You could look for some exmaples in *Settings - Default*)
 3. Save and close file.
 4. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Build settings*.
 5. Uncomment one of `cmd` settings and ajust path to `spcomp`. This allows you to use **Build** feature in SublimeText.
