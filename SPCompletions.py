@@ -122,8 +122,7 @@ def load_include_dir(register_callback = False) :
     include_dir.set(settings.get('include_directory', '.'))
 
     if not os.path.isabs(str(include_dir.get())) :
-        # print(str(include_dir.get()))
-        raise RuntimeError
+        raise RuntimeError("Invalid 'include_directory' setting (%s): directory doesn't exists" % str(include_dir.get()))
 
     file_observer.unschedule_all()
     file_observer.schedule(file_event_handler, include_dir.get(), True)
