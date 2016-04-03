@@ -120,7 +120,7 @@ def on_settings_modified() :
 def load_include_dir(register_callback = False) :
     settings = _get_settings()
     if register_callback :
-        settings.add_on_change('SPCompletions', on_settings_modified)
+        settings.add_on_change('SourcePawn Completions', on_settings_modified)
 
     include_dir.set(settings.get('include_directory', '.'))
 
