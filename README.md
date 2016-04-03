@@ -24,8 +24,8 @@ Clone this repository into a subfolder of your Packages directory:
 1. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Settings - User*.
 2. Add `include_directory` setting with path to your SourceMod include files (`sourcemod/scripting` folder). (You could look for some exmaples in *Settings - Default*)
 3. Save and close file.
-4. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Build settings*.
-5. Uncomment one of `cmd` settings and ajust path to `spcomp`. This allows you to use **Build** feature in SublimeText.
+4. Open *Sublime Text* -> *Preferences* -> *Package Settings* -> *SourcePawn Completions* -> *Build settings - Example* and *Build settings - User*
+5. Copy one of `cmd` settings from `SourcePawn.sublime-build.example`, paste it to `SourcePawn.sublime-build` and ajust path to `spcomp`. This allows you to use **Build** feature in SublimeText.
 6. Save and close file.
 
 ## Usage
