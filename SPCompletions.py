@@ -20,7 +20,7 @@ from collections import defaultdict
 from queue import *
 from threading import Timer, Thread
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.append(os.path.dirname(__file__))
 import watchdog.events
 import watchdog.observers
 import watchdog.utils
