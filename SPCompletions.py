@@ -78,7 +78,7 @@ class SPCompletions(sublime_plugin.EventListener):
         if self.delay_queue is not None :
             self.delay_queue.cancel()
 
-        delay_time = sublime.load_settings('SPCompletions.sublime-settings').get('live_refresh_delay', 1.0)
+        delay_time = _get_settings().get('live_refresh_delay', 1.0)
         self.delay_queue = Timer(float(delay_time), add_to_queue_forward, [ view ])
         self.delay_queue.start()
 
@@ -111,11 +111,14 @@ class SPCompletions(sublime_plugin.EventListener):
 
         funcset.update(node.funcs)
 
+def _get_settings():
+    return sublime.load_settings('SPCompletions.sublime-settings')
+
 def on_settings_modified() :
     load_include_dir()
 
 def load_include_dir(register_callback = False) :
-    settings = sublime.load_settings('SPCompletions.sublime-settings')
+    settings = _get_settings()
     if register_callback :
         settings.add_on_change('SPCompletions', on_settings_modified)
 
