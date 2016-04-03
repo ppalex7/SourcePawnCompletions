@@ -31,6 +31,11 @@
                                 "args": {"file": "${packages}/SourcePawn Completions/SourcePawn.sublime-build.example"},
                                 "caption": "Build system - Example"
                             },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/User/SourcePawn.sublime-build"},
+                                "caption": "Build system - User"
+                            },
                             { "caption": "-" }
                         ]
                     }
