@@ -112,7 +112,7 @@ class SPCompletions(sublime_plugin.EventListener):
         funcset.update(node.funcs)
 
 def _get_settings():
-    return sublime.load_settings('SPCompletions.sublime-settings')
+    return sublime.load_settings('SourcePawn Completions.sublime-settings')
 
 def on_settings_modified() :
     load_include_dir()
