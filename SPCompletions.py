@@ -160,6 +160,14 @@ def _save_user_settings():
     if not settings.get('bootstrapped'):
         settings.set('bootstrapped', True)
         sublime.save_settings(_settings_filename())
+        # build-system
+        build_filename = 'SourcePawn.sublime-build'
+        build = sublime.load_settings(build_filename)
+        if not build.get('file_regex'):
+            build.set('file_regex', '(.*)\\((\\d+)\\) :')
+        if not build.get('selector'):
+            build.set('selector', 'source.sp')
+        sublime.save_settings(build_filename)
 
 class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler) :
     def __init__(self) :
