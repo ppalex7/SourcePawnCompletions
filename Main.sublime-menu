@@ -28,8 +28,8 @@
                             { "caption": "-" },
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/SourcePawn Completions/SourcePawn.sublime-build"},
-                                "caption": "Build settings"
+                                "args": {"file": "${packages}/SourcePawn Completions/SourcePawn.sublime-build.example"},
+                                "caption": "Build system - Example"
                             },
                             { "caption": "-" }
                         ]
