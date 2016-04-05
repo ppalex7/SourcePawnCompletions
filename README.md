@@ -7,10 +7,11 @@ Includes [watchdog python module](https://https://github.com/gorakhargosh/watchd
 
 ## Installing
 
-### Via package control
+### Via [package control](https://packagecontrol.io/installation)
 
-1. **Package control: Add repository**, enter `http://s.ppalex.com/packagecontrol/packages.json`
-2. **Package control: Install package**, enter *SourcePawn Completions*
+1. Press `Control+Shift+P` or `Cmd+Shift+P` (on Mac)
+2. Type **Package Control: Install Package**, hit enter.
+3. Type in **SourcePawn Completions**, hit enter again.
 
 ### Manually
 
