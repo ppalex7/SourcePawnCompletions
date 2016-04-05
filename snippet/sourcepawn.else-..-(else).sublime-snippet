@@ -1,9 +1,0 @@
-<snippet>
-	<description>Else</description>
-    <content><![CDATA[else
-{
-	${1:/* code */}
-}]]></content>
-    <tabTrigger>else</tabTrigger>
-    <scope>source.sp, source.inc</scope>
-</snippet>
