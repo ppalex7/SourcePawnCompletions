@@ -31,7 +31,7 @@ Clone this repository into a subfolder of your Packages directory:
 
 ## Usage
 
-SP Completions is automatically active on .sp and .inc files. The completion list updates whenever you stop typing for 1 second or when you save the file.
+SourcePawn Completions is automatically active on .sp and .inc files. The completion list updates whenever you stop typing for 1 second or when you save the file.
 
 ## Aslo recommend
 To take full advantage recommend to install the following packages:
