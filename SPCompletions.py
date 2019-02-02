@@ -575,7 +575,7 @@ def process_function_string(node, func, is_native) :
     if returntype :
         node.funcs.add((returntype + ' | ' + funcname + '  (function)', autocomplete))
     else :
-        node.funcs.add((funcname + '  (function)', autocomplete))
+        node.funcs.add((funcname + ' (function)', autocomplete))
 
 def skip_brace_line(line_reader, buffer) :
     """skip_brace_line(File, string) -> string"""
