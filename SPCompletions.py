@@ -538,7 +538,7 @@ def process_function_string(node, func, is_native) :
     else :
         functype = split[0].strip()
         remaining = split[1]
-        m = re.search(r'(\w+)[ \t]+(.*?\(.*\n?)', remaining)
+        m = re.search(r'([^ ]+)[ \t]+([^ ]+\(.*\n?)', remaining)
         if m :
             returntype = m.group(1)
             remaining = m.group(2)
