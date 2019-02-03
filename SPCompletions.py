@@ -379,7 +379,8 @@ def process_lines(line_reader, node) :
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
         if len(buffer) <= 0 :
             continue
-        if buffer.startswith('#pragma deprecated') :
+        # if buffer.startswith('#pragma deprecated') :
+        if re.search(r'^\s*#pragma deprecated') :
             buffer = read_line(line_reader)
             if buffer is not None and buffer.startswith('stock ') :
                 buffer = skip_brace_line(line_reader, buffer)
@@ -530,8 +531,6 @@ def get_full_function_string(line_reader, node, buffer, is_native, found_comment
 
 def process_function_string(node, func, is_native) :
     """process_function_string(string, string, bool)"""
-    if re.search(r'deprecated', func) :
-        return
 
     returntype = ''
     split = func.split(' ', 1)
