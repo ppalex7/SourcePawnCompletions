@@ -530,6 +530,9 @@ def get_full_function_string(line_reader, node, buffer, is_native, found_comment
 
 def process_function_string(node, func, is_native) :
     """process_function_string(string, string, bool)"""
+    if re.search(r'deprecated', func) :
+        return
+
     returntype = ''
     split = func.split(' ', 1)
     if len(split) < 2 :
@@ -538,7 +541,7 @@ def process_function_string(node, func, is_native) :
     else :
         functype = split[0].strip()
         remaining = split[1]
-        m = re.search(r'([^ ]+)[ \t]+([^ ]+\(.*\n?)', remaining)
+        m = re.search(r'([^\s]+)[ \t]+([^\s]+\(.*\n?)', remaining)
         if m :
             returntype = m.group(1)
             remaining = m.group(2)
@@ -573,7 +576,7 @@ def process_function_string(node, func, is_native) :
         i += 1
     autocomplete += ')'
     if returntype :
-        node.funcs.add((returntype + ' | ' + funcname + '  (function)', autocomplete))
+        node.funcs.add((returntype + ' | ' + funcname + ' (function)', autocomplete))
     else :
         node.funcs.add((funcname + ' (function)', autocomplete))
 
