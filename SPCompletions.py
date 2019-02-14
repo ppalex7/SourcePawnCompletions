@@ -379,8 +379,8 @@ def process_lines(line_reader, node) :
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
         if len(buffer) <= 0 :
             continue
-
-        if buffer.startswith('#pragma deprecated') :
+        # if buffer.startswith('#pragma deprecated') :
+        if re.search(r'^\s*#pragma deprecated') :
             buffer = read_line(line_reader)
             if buffer is not None and buffer.startswith('stock ') :
                 buffer = skip_brace_line(line_reader, buffer)
@@ -532,6 +532,7 @@ def get_full_function_string(line_reader, node, buffer, is_native, found_comment
 def process_function_string(node, func, is_native) :
     """process_function_string(string, string, bool)"""
 
+    returntype = ''
     split = func.split(' ', 1)
     if len(split) < 2 :
         functype = ''
@@ -539,6 +540,11 @@ def process_function_string(node, func, is_native) :
     else :
         functype = split[0].strip()
         remaining = split[1]
+        m = re.search(r'([^\s]+)[ \t]+([^\s]+\(.*\n?)', remaining)
+        if m :
+            returntype = m.group(1)
+            remaining = m.group(2)
+
     # TODO: Process functags
     if functype == 'functag' :
         return
@@ -568,7 +574,10 @@ def process_function_string(node, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    node.funcs.add((funcname + '  (function)', autocomplete))
+    if returntype :
+        node.funcs.add((returntype + ' | ' + funcname + ' (function)', autocomplete))
+    else :
+        node.funcs.add((funcname + ' (function)', autocomplete))
 
 def skip_brace_line(line_reader, buffer) :
     """skip_brace_line(File, string) -> string"""
