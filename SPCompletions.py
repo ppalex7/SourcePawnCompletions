@@ -379,8 +379,7 @@ def process_lines(line_reader, node) :
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
         if len(buffer) <= 0 :
             continue
-        # if buffer.startswith('#pragma deprecated') :
-        if re.search(r'^\s*#pragma deprecated') :
+        if buffer.startswith('#pragma deprecated') :
             buffer = read_line(line_reader)
             if buffer is not None and buffer.startswith('stock ') :
                 buffer = skip_brace_line(line_reader, buffer)
@@ -396,8 +395,6 @@ def process_lines(line_reader, node) :
             buffer = skip_brace_line(line_reader, buffer)
         elif buffer.startswith('forward ') or buffer.startswith('functag ') :
             (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
-        elif buffer.startswith('new ') or buffer.startswith('decl ') :
-            buffer = process_variable(node, buffer)
         elif brace_level == 0 and not found_enum and not buffer.strip()[0] == '#' and not buffer.startswith('static ') and not buffer.startswith('static const '):
             (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
 
@@ -405,6 +402,10 @@ def process_lines(line_reader, node) :
             (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
 
 def process_variable(node, buffer) :
+    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    if file :
+        file = ' [' + file + ']'
+
     result = ''
     consumingKeyword = True
     consumingName = False
@@ -420,7 +421,7 @@ def process_variable(node, buffer) :
             elif c == ' ' or c == '=' or c == ';' :
                 result = result.strip()
                 if result != '' :
-                    node.funcs.add((result + '  (variable)', result))
+                    node.funcs.add((result + '  (variable)' + file, result))
                 result = ''
                 consumingName = False
                 consumingBrackets = False
@@ -433,11 +434,15 @@ def process_variable(node, buffer) :
 
     result = result.strip()
     if result != '' :
-        node.funcs.add((result + '  (variable)', result))
+        node.funcs.add((result + '  (variable)' + file, result))
 
     return ''
 
 def process_enum(node, buffer, enum_contents, found_enum) :
+    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    if file :
+        file = ' [' + file + ']'
+
     pos = buffer.find('}')
     if pos != -1 :
         buffer = buffer[0:pos]
@@ -445,6 +450,11 @@ def process_enum(node, buffer, enum_contents, found_enum) :
 
     enum_contents = '%s%s' % (enum_contents, buffer)
     buffer = ''
+
+    enum_type = ''
+    m = re.search(r'enum\s([^\s]+)\s*\{', enum_contents)
+    if m :
+        enum_type = ': ' + m.group(1)
 
     ignore = False
     if not found_enum :
@@ -460,7 +470,7 @@ def process_enum(node, buffer, enum_contents, found_enum) :
             elif c == ',' :
                 buffer = buffer.strip()
                 if buffer != '' :
-                    node.funcs.add((buffer + '  (enum)', buffer))
+                    node.funcs.add((buffer + ' (enum' + enum_type + ')' + file, buffer))
 
                 ignore = False
                 buffer = ''
@@ -471,13 +481,17 @@ def process_enum(node, buffer, enum_contents, found_enum) :
 
         buffer = buffer.strip()
         if buffer != '' :
-            node.funcs.add((buffer + '  (enum)', buffer))
+            node.funcs.add((buffer + ' (enum' + enum_type + ')' + file, buffer))
 
         buffer = ''
 
     return (buffer, enum_contents, found_enum)
 
 def get_preprocessor_define(node, buffer) :
+    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    if file :
+        file = ' [' + file + ']'
+
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value
     define = re.search('#define[\\s]+([^\\s]+)[\\s]+(.+)', buffer)
@@ -486,7 +500,7 @@ def get_preprocessor_define(node, buffer) :
         buffer = ''
         name = define.group(1)
         value = define.group(2).strip()
-        node.funcs.add((name + '  (constant: ' + value + ')', name))
+        node.funcs.add((name + '  (constant: ' + value + ')' + file, name))
     return buffer
 
 def get_full_function_string(line_reader, node, buffer, is_native, found_comment, brace_level) :
@@ -531,8 +545,18 @@ def get_full_function_string(line_reader, node, buffer, is_native, found_comment
 
 def process_function_string(node, func, is_native) :
     """process_function_string(string, string, bool)"""
+    if re.search(r'deprecated', func) :
+        return
+
+    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    if file :
+        file = ' [' + file + ']'
 
     returntype = ''
+    m = re.search(r'(\b[^\s]+)(?:[ \t]+|:)([^\s]+\(.*\n?)', func)
+    if m :
+        return_type = ': ' + m.group(1)
+
     split = func.split(' ', 1)
     if len(split) < 2 :
         functype = ''
@@ -540,13 +564,12 @@ def process_function_string(node, func, is_native) :
     else :
         functype = split[0].strip()
         remaining = split[1]
-        m = re.search(r'([^\s]+)[ \t]+([^\s]+\(.*\n?)', remaining)
+        m = re.search(r'(\b[^\s]+)[ \t]+([^\s]+\(.*\n?)', remaining)
         if m :
-            returntype = m.group(1)
             remaining = m.group(2)
 
     # TODO: Process functags
-    if functype == 'functag' :
+    if functype == 'functag' or functype == 'typedef' or functype == 'typeset':
         return
     split = remaining.split('(', 1)
     if len(split) < 2 :
@@ -556,7 +579,6 @@ def process_function_string(node, func, is_native) :
     split_funcname_and_return = funcname_and_return.split(':')
     if len(split_funcname_and_return) > 1 :
         funcname = split_funcname_and_return[1]
-        returntype = split_funcname_and_return[0]
     else :
         funcname = split_funcname_and_return[0]
 
@@ -574,10 +596,8 @@ def process_function_string(node, func, is_native) :
         autocomplete += '${%d:%s}' % (i, param.strip())
         i += 1
     autocomplete += ')'
-    if returntype :
-        node.funcs.add((returntype + ' | ' + funcname + ' (function)', autocomplete))
-    else :
-        node.funcs.add((funcname + ' (function)', autocomplete))
+
+    node.funcs.add((funcname + ' (function' + return_type + ')' + file, autocomplete))
 
 def skip_brace_line(line_reader, buffer) :
     """skip_brace_line(File, string) -> string"""
