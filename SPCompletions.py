@@ -389,8 +389,6 @@ def process_lines(line_reader, node):
         elif buffer.startswith('enum '):
             found_enum = True
             enum_contents = ''
-        # elif buffer.startswith('methodmap '):
-        #     found_methodmap = True
         elif buffer.startswith('native '):
             (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, True, found_comment, brace_level)
         elif buffer.startswith('stock '):
@@ -398,8 +396,6 @@ def process_lines(line_reader, node):
             buffer = skip_brace_line(line_reader, buffer)
         elif buffer.startswith('forward ') or buffer.startswith('public '):
             (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
-        # elif buffer.startswith('new ') or buffer.startswith('decl '):
-        #     buffer = process_variable(node, buffer)
         elif brace_level == 0 and not found_enum and not buffer.strip()[0] == '#' and not buffer.startswith('static ') and not buffer.startswith('static const '):
             if buffer[0] == '}':
                 buffer = buffer[1:-1]
@@ -407,8 +403,6 @@ def process_lines(line_reader, node):
 
         if found_enum:
             (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
-        # if found_methodmap:
-        #     buffer = process_methodmap(node, buffer)
 
 def process_variable(node, buffer):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
@@ -446,13 +440,6 @@ def process_variable(node, buffer):
         node.funcs.add((result + '  (variable)' + file, result))
 
     return ''
-
-# def process_methodmap(node, buffer):
-#     pos = buffer.find('\n}')
-#     if pos != -1:
-#         buffer = buffer[0:pos]
-#     else:
-#         return
 
 def process_enum(node, buffer, enum_contents, found_enum):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
