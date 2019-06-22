@@ -6,7 +6,7 @@ Based on [sublime-sourcepawn](https://github.com/austinwagner/sublime-sourcepawn
 Includes [watchdog python module](https://https://github.com/gorakhargosh/watchdog)  
   
   
-<p><img src="https://i.imgur.com/Xzum7I8.png"></p>
+<p><img src="https://i.imgur.com/DG14QD8.png"></p>
 
 ## Installing
 
