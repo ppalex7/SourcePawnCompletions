@@ -377,30 +377,39 @@ def process_lines(line_reader, node):
 
         if buffer is None:
             break
+
+        if brace_level == 0:
+            m = enum_re.search(buffer)
+            if m:
+                if not m.group(1): # if struct was found, dont do anything. Unsupported currently
+                    found_enum = True
+                    enum_contents = ''
+            elif buffer.strip().startswith('#pragma deprecated'):
+                buffer = read_line(line_reader)
+                if buffer is not None and buffer.strip().startswith('stock '):
+                    pos = buffer.find('{')
+                    if pos > 0: # if line contains {, jump to it
+                        buffer = buffer[pos:-1]
+                    buffer = skip_brace_line(line_reader, buffer)
+            elif buffer.strip().startswith('public'):
+                pos = buffer.find('{')
+                if pos > 0: # if line contains {, jump to it
+                    buffer = buffer[pos:-1]
+                else: # otherwise, skip to next line
+                    continue
+            elif function_re.search(buffer):
+                (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, found_comment, brace_level)
+
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
+
         if len(buffer) <= 0:
             continue
-        if buffer.startswith('#pragma deprecated'):
-            buffer = read_line(line_reader)
-            if buffer is not None and buffer.startswith('stock '):
-                buffer = skip_brace_line(line_reader, buffer)
-        elif buffer.startswith('#define '):
-            buffer = get_preprocessor_define(node, buffer)
-        elif buffer.startswith('enum '):
-            found_enum = True
-            enum_contents = ''
-        elif buffer.startswith('native '):
-            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, True, found_comment, brace_level)
-        elif buffer.startswith('stock '):
-            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, True, found_comment, brace_level)
-            buffer = skip_brace_line(line_reader, buffer)
-        elif buffer.startswith('forward ') or buffer.startswith('public '):
-            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
-        elif brace_level == 0 and not found_enum and not buffer.strip()[0] == '#' and not buffer.startswith('static ') and not buffer.startswith('static const '):
-            (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
 
         if found_enum:
             (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
+        elif buffer.startswith('#define '):
+            buffer = get_preprocessor_define(node, buffer)
+
 
 def process_variable(node, buffer):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
@@ -411,6 +420,7 @@ def process_variable(node, buffer):
     consumingKeyword = True
     consumingName = False
     consumingBrackets = False
+
     for c in buffer:
         if consumingKeyword:
             if c == ' ':
@@ -444,6 +454,8 @@ def process_enum(node, buffer, enum_contents, found_enum):
     if file:
         file = ' [' + file + ']'
 
+    print('Processing enum: ' + buffer)
+
     pos = buffer.find('}')
     if pos != -1:
         buffer = buffer[0:pos]
@@ -453,9 +465,10 @@ def process_enum(node, buffer, enum_contents, found_enum):
     buffer = ''
 
     enum_type = ''
-    m = re.search(r'enum\s([^\s]+)\s*\{', enum_contents)
+    m = enum_re.search(enum_contents)
     if m:
-        enum_type = ': ' + m.group(1)
+        if m.group(2):
+            enum_type = ': ' + m.group(2)
 
     ignore = False
     if not found_enum:
@@ -495,7 +508,7 @@ def get_preprocessor_define(node, buffer):
 
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value
-    define = re.search('#define[\\s]+([^\\s]+)[\\s]+(.+)', buffer)
+    define = define_re.search(buffer)
     if define:
         # The whole line is consumed, return an empty string to indicate that
         buffer = ''
@@ -504,7 +517,7 @@ def get_preprocessor_define(node, buffer):
         node.funcs.add((name + '  (constant: ' + value + ')' + file, name))
     return buffer
 
-def get_full_function_string(line_reader, node, buffer, is_native, found_comment, brace_level):
+def get_full_function_string(line_reader, node, buffer, found_comment, brace_level):
     """get_full_function_string(File, string, string, bool) -> string"""
     multi_line = False
     temp = ''
@@ -515,10 +528,13 @@ def get_full_function_string(line_reader, node, buffer, is_native, found_comment
         if not open_paren_found:
             parenpos = buffer.find('(')
             eqpos = buffer.find('=')
+
             if eqpos != -1 and (parenpos == -1 or eqpos < parenpos):
                 return ('', found_comment, brace_level)
+
             if buffer.find(';') != -1 and parenpos == -1:
                 return ('', found_comment, brace_level)
+
             if parenpos != -1:
                 open_paren_found = True
 
@@ -537,18 +553,20 @@ def get_full_function_string(line_reader, node, buffer, is_native, found_comment
         buffer = read_line(line_reader)
         if buffer is None:
             return (buffer, found_comment, brace_level)
+
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
 
     if full_func_str is not None and not full_func_str in DEPRECATED_FUNCTIONS:
-        process_function_string(node, full_func_str, is_native)
+        process_function_string(node, full_func_str)
 
     return (buffer, found_comment, brace_level)
 
-def process_function_string(node, func, is_native):
+def process_function_string(node, func):
     """process_function_string(string, string, bool)"""
     if re.search(r'deprecated', func):
         return
 
+    print("Processing Function: " + func)
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
     if file:
         file = ' [' + file + ']'
@@ -556,12 +574,11 @@ def process_function_string(node, func, is_native):
     func_type = ''
     return_type = ': '
     remaining = ''
-    # print('Processing: ' + func)
-    m = re.search(r'^[ \t]*(?:(native|stock|forward) )?(?:(\w+)(?: +|:))?([\w_]+ *\(.*?\))', func)
+    m = fullfunction_re.search(func)
     if m:
         if m.group(1):
             func_type += m.group(1) + ' '
-        return_type += func_type + m.group(2) if m.group(2) else '_'
+        return_type += func_type + (m.group(2) if m.group(2) else '_')
         remaining = m.group(3)
     else:
         return
@@ -593,6 +610,7 @@ def skip_brace_line(line_reader, buffer):
     found = False
 
     while buffer is not None:
+        print("Skipping brace: " + buffer)
         for c in buffer:
             if (c == '{'):
                 num_brace += 1
@@ -601,6 +619,11 @@ def skip_brace_line(line_reader, buffer):
                 num_brace -= 1
 
         if num_brace == 0:
+            pos = buffer.find("}")
+            buffer = buffer[pos+1:-1]
+            print("Skip 2: " + buffer)
+            if not buffer.strip():
+                buffer = read_line(line_reader)
             return buffer
 
         buffer = read_line(line_reader)
@@ -638,5 +661,9 @@ include_dir = StringWrapper()
 file_observer = watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
 file_event_handler = IncludeFileEventHandler()
-includes_re = re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
-local_re = re.compile('\\.(sp|inc)$')
+includes_re = re.compile(r'^[\s]*#include[\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
+local_re = re.compile(r'\.(sp|inc)$')
+enum_re = re.compile(r'enum[ \t]*(struct[ \t]*)?([\w_]+)?')
+function_re = re.compile(r'^[ \t]*(?:(native|stock|forward)[ \t]*)?(?:(\w+)(?:[ \t]+|:))?([\w_]+[ \t]*\()')
+fullfunction_re = re.compile(r'^[ \t]*(?:(native|stock|forward) )?(?:(\w+)(?: +|:))?([\w_]+ *\(.*?\))')
+define_re = re.compile(r'#define[\s]+([^\s]+)[\s]+(.+)')
