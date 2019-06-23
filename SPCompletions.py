@@ -401,7 +401,6 @@ def process_lines(line_reader, node):
 
         if found_enum:
             (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
-            found_enum = False
 
 def process_variable(node, buffer):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
