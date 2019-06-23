@@ -397,12 +397,11 @@ def process_lines(line_reader, node):
         elif buffer.startswith('forward ') or buffer.startswith('public '):
             (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
         elif brace_level == 0 and not found_enum and not buffer.strip()[0] == '#' and not buffer.startswith('static ') and not buffer.startswith('static const '):
-            if buffer[0] == '}':
-                buffer = buffer[1:-1]
             (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, False, found_comment, brace_level)
 
         if found_enum:
             (buffer, enum_contents, found_enum) = process_enum(node, buffer, enum_contents, found_enum)
+            found_enum = False
 
 def process_variable(node, buffer):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
