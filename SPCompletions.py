@@ -124,7 +124,6 @@ class SPCompletions(sublime_plugin.EventListener):
         if node in visited:
             return
 
-
         visited.add(node)
         for child in node.children:
             self.generate_funcset_recur(child, funcset, visited)
@@ -395,8 +394,7 @@ def read_line(file):
     line = file.readline()
     if len(line) > 0:
         return line
-    else:
-        return None
+    return None
 
 
 def process_buffer(text, node):
