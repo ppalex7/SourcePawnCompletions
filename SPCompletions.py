@@ -437,6 +437,7 @@ def process_lines(line_reader, node):
             m = enum_re.search(buffer)
             if m:
                 if not m.group(1): # if struct was found, dont do anything. Unsupported currently
+                    print("Found enum: " + m.group(0))
                     found_enum = True
                     enum_contents = ''
             elif buffer.strip().startswith('#pragma deprecated'):
@@ -727,7 +728,7 @@ file_event_handler = IncludeFileEventHandler()
 include_dirs = Wrapper()
 includes_re = re.compile(r'^[\s]*#include[\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
 local_re = re.compile(r'\.(sp|inc)$')
-enum_re = re.compile(r'enum[ \t]*(struct[ \t]*)?([\w_]+)?')
+enum_re = re.compile(r'enum\b[ \t]*(struct[ \t]*)?([\w_]+)?')
 function_re = re.compile(r'^(?:(native|stock|forward)[ \t]*)?(?:([\w_]+)(?:[ \t]+|:))?([\w_]+[ \t]*\()')
 fullfunction_re = re.compile(r'^(?:(native|stock|forward) )?(?:([\w_]+)(?: +|:))?([\w_]+ *\(.*?\))')
 define_re = re.compile(r'#define[\s]+([^\s]+)[\s]+(.+)')
