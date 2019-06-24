@@ -431,6 +431,7 @@ def process_lines(line_reader, node):
                     if pos > 0: # if line contains {, jump to it
                         buffer = buffer[pos:-1]
                     buffer = skip_brace_line(line_reader, buffer)
+                    continue
             elif buffer.strip().startswith('public'):
                 pos = buffer.find('{')
                 if pos > 0: # if line contains {, jump to it
