@@ -653,19 +653,21 @@ def process_function_string(node, func):
 def skip_brace_line(line_reader, buffer):
     """skip_brace_line(File, string) -> string"""
     num_brace = 0
-    found = False
 
     while buffer is not None:
         print("Skipping brace: " + buffer)
+        count = 0
+        pos = 0
         for c in buffer:
             if (c == '{'):
                 num_brace += 1
-                found = True
             elif (c == '}'):
                 num_brace -= 1
+            if num_brace == 0:
+                pos = count
+            count += 1
 
         if num_brace == 0:
-            pos = buffer.find("}")
             buffer = buffer[pos+1:-1]
             print("Skip 2: " + buffer)
             if not buffer.strip():
