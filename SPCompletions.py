@@ -26,9 +26,9 @@ import watchdog.observers
 import watchdog.utils
 from watchdog.utils.bricks import OrderedSetQueue
 
-class StringWrapper:
+class Wrapper:
     def __init__(self):
-        self.value = ''
+        self.value = []
     def set(self, newval):
         self.value = newval
     def get(self):
@@ -148,14 +148,21 @@ def load_include_dir(register_callback = False):
     if register_callback:
         settings.add_on_change('SourcePawn Completions', on_settings_modified)
 
-    include_dir.set(settings.get('include_directory', '.'))
+    dirs = settings.get("include_directory", ".")
+    include_dirs.set(dirs)
+    if type(dirs) is not list:
+        if not os.path.isabs(str(dirs)):
+            raise RuntimeError("Invalid 'include_directory' setting (%s): directory doesn't exists" % str(dirs))
 
-    if not os.path.isabs(str(include_dir.get())):
-        raise RuntimeError("Invalid 'include_directory' setting (%s): directory doesn't exists" % str(include_dir.get()))
+        file_observer.unschedule_all()
+        file_observer.schedule(file_event_handler, dirs, True)
+    else:
+        for path in dirs:
+            if not os.path.isabs(str(path)):
+                raise RuntimeError("Invalid 'include_directory' setting (%s): directory doesn't exists" % str(path))
 
-    file_observer.unschedule_all()
-    file_observer.schedule(file_event_handler, include_dir.get(), True)
-
+            file_observer.unschedule_all()
+            file_observer.schedule(file_event_handler, path, True)
 
 def sorted_nicely( l ):
     """ Sort the given iterable in the way that humans expect."""
@@ -302,8 +309,13 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
 
 
 def get_file_name(view_file_name, base_file_name):
+    file_name = ''
     if local_re.search(base_file_name) == None:
-        file_name = os.path.join(include_dir.get(), base_file_name + '.inc')
+        dirs = include_dirs.get()
+        for path in dirs:
+            file_name = os.path.join(path, base_file_name + '.inc')
+            if os.path.exists(file_name):
+                break
     else:
         file_name = os.path.join(os.path.dirname(view_file_name), base_file_name)
 
@@ -706,10 +718,10 @@ def read_string(buffer, found_comment, brace_level):
 
 to_process = OrderedSetQueue()
 nodes = dict() # map files to nodes
-include_dir = StringWrapper()
 file_observer = watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
 file_event_handler = IncludeFileEventHandler()
+include_dirs = Wrapper()
 includes_re = re.compile(r'^[\s]*#include[\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
 local_re = re.compile(r'\.(sp|inc)$')
 enum_re = re.compile(r'enum[ \t]*(struct[ \t]*)?([\w_]+)?')
