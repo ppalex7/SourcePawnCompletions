@@ -312,10 +312,13 @@ def get_file_name(view_file_name, base_file_name):
     file_name = ''
     if local_re.search(base_file_name) == None:
         dirs = include_dirs.get()
-        for path in dirs:
-            file_name = os.path.join(path, base_file_name + '.inc')
-            if os.path.exists(file_name):
-                break
+        if type(dirs) is not list:
+            file_name = os.path.join(dirs, base_file_name + '.inc')
+        else:          
+            for path in dirs:
+                file_name = os.path.join(path, base_file_name + '.inc')
+                if os.path.exists(file_name):
+                    break
     else:
         file_name = os.path.join(os.path.dirname(view_file_name), base_file_name)
 
