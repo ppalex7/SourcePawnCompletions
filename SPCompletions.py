@@ -34,8 +34,10 @@ class StringWrapper:
     def get(self):
         return self.value
 
+
 def plugin_loaded():
     load_include_dir(True)
+
 
 def unload_handler():
     file_observer.stop()
@@ -45,11 +47,13 @@ def unload_handler():
     # remove callback
     _get_settings().clear_on_change('SourcePawn Completions')
 
+
 class SPCompletions(sublime_plugin.EventListener):
     def __init__(self):
         process_thread.start()
         self.delay_queue = None
         file_observer.start()
+
 
     def on_activated(self, view):
         if not self.is_sourcepawn_file(view):
@@ -59,22 +63,28 @@ class SPCompletions(sublime_plugin.EventListener):
         if not view.file_name() in nodes:
             add_to_queue(view)
 
+
     def on_activated_async(self, view):
         _save_user_settings()
+
 
     def on_modified(self, view):
         self.add_to_queue_delayed(view)
 
+
     def on_post_save(self, view):
         self.add_to_queue_now(view)
 
+
     def on_load(self, view):
         self.add_to_queue_now(view)
+
 
     def add_to_queue_now(self, view):
         if not self.is_sourcepawn_file(view):
             return
         add_to_queue(view)
+
 
     def add_to_queue_delayed(self, view):
         if not self.is_sourcepawn_file(view):
@@ -87,8 +97,10 @@ class SPCompletions(sublime_plugin.EventListener):
         self.delay_queue = Timer(float(delay_time), add_to_queue_forward, [ view ])
         self.delay_queue.start()
 
+
     def is_sourcepawn_file(self, view):
         return view.file_name() is not None and view.match_selector(0, 'source.sp') or view.match_selector(0, 'source.inc')
+
 
     def on_query_completions(self, view, prefix, locations):
         if not view.match_selector(locations[0], 'source.sp -string -comment -constant') \
@@ -96,6 +108,7 @@ class SPCompletions(sublime_plugin.EventListener):
             return []
 
         return (self.generate_funcset(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+
 
     def generate_funcset(self, file_name):
         funcset = set()
@@ -106,9 +119,11 @@ class SPCompletions(sublime_plugin.EventListener):
         self.generate_funcset_recur(node, funcset, visited)
         return sorted_nicely(funcset)
 
+
     def generate_funcset_recur(self, node, funcset, visited):
         if node in visited:
             return
+
 
         visited.add(node)
         for child in node.children:
@@ -116,14 +131,18 @@ class SPCompletions(sublime_plugin.EventListener):
 
         funcset.update(node.funcs)
 
+
 def _settings_filename():
     return 'SourcePawn Completions.sublime-settings'
+
 
 def _get_settings():
     return sublime.load_settings(_settings_filename())
 
+
 def on_settings_modified():
     load_include_dir()
+
 
 def load_include_dir(register_callback = False):
     settings = _get_settings()
@@ -138,22 +157,27 @@ def load_include_dir(register_callback = False):
     file_observer.unschedule_all()
     file_observer.schedule(file_event_handler, include_dir.get(), True)
 
+
 def sorted_nicely( l ):
     """ Sort the given iterable in the way that humans expect."""
     convert = lambda text: int(text) if text.isdigit() else text
     alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key[0]) ]
     return sorted(l, key = alphanum_key)
 
+
 def add_to_queue_forward(view):
     sublime.set_timeout(lambda: add_to_queue(view), 0)
+
 
 def add_to_queue(view):
     # The view can only be accessed from the main thread, so run the regex
     # now and process the results later
     to_process.put((view.file_name(), view.substr(sublime.Region(0, view.size()))))
 
+
 def add_include_to_queue(file_name):
     to_process.put((file_name, None))
+
 
 def _save_user_settings():
     settings = _get_settings()
@@ -169,22 +193,28 @@ def _save_user_settings():
             build.set('selector', 'source.sp')
         sublime.save_settings(build_filename)
 
+
 class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
     def __init__(self):
         watchdog.events.FileSystemEventHandler.__init__(self)
 
+
     def on_created(self, event):
         sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
+
 
     def on_modified(self, event):
         sublime.set_timeout(lambda: on_modified_main_thread(event.src_path), 0)
 
+
     def on_deleted(self, event):
         sublime.set_timeout(lambda: on_deleted_main_thread(event.src_path), 0)
+
 
 def on_modified_main_thread(file_path):
     if not is_active(file_path):
         add_include_to_queue(file_path)
+
 
 def on_deleted_main_thread(file_path):
     if is_active(file_path):
@@ -196,8 +226,10 @@ def on_deleted_main_thread(file_path):
 
     node.remove_all_children_and_funcs()
 
+
 def is_active(file_name):
     return sublime.active_window().active_view().file_name() == file_name
+
 
 class ProcessQueueThread(watchdog.utils.DaemonThread):
     def run(self):
@@ -207,6 +239,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
                 self.process_existing_include(file_name)
             else:
                 self.process(file_name, view_buffer)
+
 
     def process(self, view_file_name, view_buffer):
         (current_node, node_added) = get_or_add_node(view_file_name)
@@ -222,6 +255,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
             current_node.remove_child(removed_node)
 
         process_buffer(view_buffer, current_node)
+
 
     def process_existing_include(self, file_name):
         current_node = nodes.get(file_name)
@@ -276,6 +310,7 @@ def get_file_name(view_file_name, base_file_name):
 
     return (file_name, os.path.exists(file_name))
 
+
 def get_or_add_node( file_name):
     node = nodes.get(file_name)
     if node is None:
@@ -285,6 +320,7 @@ def get_or_add_node( file_name):
 
     return (node, False)
 
+
 class Node:
     def __init__(self, file_name):
         self.file_name = file_name
@@ -292,9 +328,11 @@ class Node:
         self.parents = set()
         self.funcs = set()
 
+
     def add_child(self, node):
         self.children.add(node)
         node.parents.add(self)
+
 
     def remove_child(self, node):
         self.children.remove(node)
@@ -303,15 +341,18 @@ class Node:
         if len(node.parents) <= 0:
             nodes.pop(node.file_name)
 
+
     def remove_all_children_and_funcs(self):
         for child in self.children:
             self.remove_child(node)
         self.funcs.clear()
 
+
 class TextReader:
     def __init__(self, text):
         self.text = text.splitlines()
         self.position = -1
+
 
     def readline(self):
         self.position += 1
@@ -357,13 +398,16 @@ def read_line(file):
     else:
         return None
 
+
 def process_buffer(text, node):
     text_reader = TextReader(text)
     process_lines(text_reader, node)
 
+
 def process_include_file(node):
     with open(node.file_name) as file:
         process_lines(file, node)
+
 
 def process_lines(line_reader, node):
     node.funcs.clear()
@@ -449,6 +493,7 @@ def process_variable(node, buffer):
 
     return ''
 
+
 def process_enum(node, buffer, enum_contents, found_enum):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
     if file:
@@ -501,6 +546,7 @@ def process_enum(node, buffer, enum_contents, found_enum):
 
     return (buffer, enum_contents, found_enum)
 
+
 def get_preprocessor_define(node, buffer):
     file = node.file_name.rsplit('\\',1)[1].split('.')[0]
     if file:
@@ -516,6 +562,7 @@ def get_preprocessor_define(node, buffer):
         value = define.group(2).strip()
         node.funcs.add((name + '  (constant: ' + value + ')' + file, name))
     return buffer
+
 
 def get_full_function_string(line_reader, node, buffer, found_comment, brace_level):
     """get_full_function_string(File, string, string, bool) -> string"""
@@ -561,6 +608,7 @@ def get_full_function_string(line_reader, node, buffer, found_comment, brace_lev
 
     return (buffer, found_comment, brace_level)
 
+
 def process_function_string(node, func):
     """process_function_string(string, string, bool)"""
     if re.search(r'deprecated', func):
@@ -604,6 +652,7 @@ def process_function_string(node, func):
 
     node.funcs.add((funcname + ' (function' + return_type + ')' + file, autocomplete))
 
+
 def skip_brace_line(line_reader, buffer):
     """skip_brace_line(File, string) -> string"""
     num_brace = 0
@@ -628,6 +677,7 @@ def skip_brace_line(line_reader, buffer):
 
         buffer = read_line(line_reader)
     return buffer
+
 
 def read_string(buffer, found_comment, brace_level):
     """read_string(string, bool) -> (string, bool)"""
@@ -654,6 +704,7 @@ def read_string(buffer, found_comment, brace_level):
         i += 1
 
     return (result, found_comment, brace_level + result.count('{') - result.count('}'))
+
 
 to_process = OrderedSetQueue()
 nodes = dict() # map files to nodes
