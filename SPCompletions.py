@@ -360,10 +360,8 @@ class TextReader:
             retval = self.text[self.position]
             if retval == '':
                 return '\n'
-            else:
-                return retval
-        else:
-            return ''
+            return retval
+        return ''
 
 DEPRECATED_FUNCTIONS = [
     "native Float:operator*",
