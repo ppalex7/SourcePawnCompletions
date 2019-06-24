@@ -670,8 +670,6 @@ def skip_brace_line(line_reader, buffer):
         if num_brace == 0:
             buffer = buffer[pos+1:-1]
             print("Skip End: " + buffer)
-            if not buffer.strip():
-                buffer = read_line(line_reader)
             return buffer
 
         buffer = read_line(line_reader)
