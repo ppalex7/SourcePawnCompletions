@@ -655,7 +655,7 @@ def skip_brace_line(line_reader, buffer):
     num_brace = 0
 
     while buffer is not None:
-        print("Skipping brace: " + buffer)
+        print("Skipping brace: " + buffer.strip())
         count = 0
         pos = 0
         for c in buffer:
@@ -669,7 +669,7 @@ def skip_brace_line(line_reader, buffer):
 
         if num_brace == 0:
             buffer = buffer[pos+1:-1]
-            print("Skip 2: " + buffer)
+            print("Skip End: " + buffer)
             if not buffer.strip():
                 buffer = read_line(line_reader)
             return buffer
