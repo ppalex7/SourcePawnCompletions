@@ -548,6 +548,7 @@ def get_preprocessor_define(node, buffer):
     if file:
         file = ' [' + file + ']'
 
+    print("Processing define: " + buffer)
     """get_preprocessor_define(File, string) -> string"""
     # Regex the #define. Group 1 is the name, Group 2 is the value
     define = define_re.search(buffer)
