@@ -272,7 +272,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
 
         with open(file_name, 'r') as f:
             print ('Processing Include File %s' % file_name)
-            includes = include_re.findall(f.read())
+            includes = includes_re.findall(f.read())
 
         for include in includes:
             self.load_from_file(file_name, include, current_node, current_node, base_includes)
