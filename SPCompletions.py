@@ -445,14 +445,15 @@ def process_lines(line_reader, node):
                 if buffer is not None and buffer.strip().startswith('stock '):
                     pos = buffer.find('{')
                     if pos > 0: # if line contains {, jump to it
-                        buffer = buffer[pos:-1]
+                        buffer = buffer[pos:]
                     buffer = skip_brace_line(line_reader, buffer)
                     continue
             elif buffer.strip().startswith('public'):
                 pos = buffer.find('{')
                 if pos > 0: # if line contains {, jump to it
-                    buffer = buffer[pos:-1]
+                    buffer = buffer[pos:]
                 else: # otherwise, skip to next line
+                    print("continuing")
                     continue
             elif function_re.search(buffer):
                 (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, found_comment, brace_level)
@@ -685,7 +686,7 @@ def skip_brace_line(line_reader, buffer):
             count += 1
 
         if num_brace == 0:
-            buffer = buffer[pos+1:-1]
+            buffer = buffer[pos+1:]
             print("Skip End: " + buffer)
             return buffer
 
