@@ -213,7 +213,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread) :
 
         base_includes = set()
 
-        includes = includes_re.findall(view_buffer)
+        includes = include_re.findall(view_buffer)
 
         for include in includes:
             self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
@@ -650,5 +650,5 @@ include_dir = StringWrapper()
 file_observer = watchdog.observers.Observer()
 process_thread = ProcessQueueThread()
 file_event_handler = IncludeFileEventHandler()
-includes_re = re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
+include_re = re.compile('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
 local_re = re.compile('\\.(sp|inc)$')
