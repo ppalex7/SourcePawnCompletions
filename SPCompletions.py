@@ -470,8 +470,7 @@ def process_lines(line_reader, node):
 
 
 def process_variable(node, buffer):
-    file = os.path.basename(node.file_name).split('.')[0]
-
+    file = os.path.basename(node.file_name).rsplit('.')[0]
     if file:
         file = ' [' + file + ']'
 
@@ -510,7 +509,7 @@ def process_variable(node, buffer):
 
 
 def process_enum(node, buffer, enum_contents, found_enum):
-    file = os.path.basename(node.file_name).split('.')[0]
+    file = os.path.basename(node.file_name).rsplit('.')[0]
     if file:
         file = ' [' + file + ']'
 
@@ -563,7 +562,7 @@ def process_enum(node, buffer, enum_contents, found_enum):
 
 
 def get_preprocessor_define(node, buffer):
-    file = os.path.basename(node.file_name).split('.')[0]
+    file = os.path.basename(node.file_name).rsplit('.')[0]
     if file:
         file = ' [' + file + ']'
 
@@ -632,15 +631,14 @@ def process_function_string(node, func):
 
     print("Processing Function: " + func)
 
-    file = os.path.basename(node.file_name).split('.')[0]
-
+    file = os.path.basename(node.file_name).rsplit('.')[0]
     if file:
         file = ' [' + file + ']'
 
     func_type = ''
     return_type = ': '
     remaining = ''
-    
+
     m = fullfunction_re.search(func)
     if m:
         if m.group(1):
