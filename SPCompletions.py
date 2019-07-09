@@ -470,7 +470,8 @@ def process_lines(line_reader, node):
 
 
 def process_variable(node, buffer):
-    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    file = os.path.basename(node.file_name).split('.')[0]
+
     if file:
         file = ' [' + file + ']'
 
@@ -509,7 +510,7 @@ def process_variable(node, buffer):
 
 
 def process_enum(node, buffer, enum_contents, found_enum):
-    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    file = os.path.basename(node.file_name).split('.')[0]
     if file:
         file = ' [' + file + ']'
 
@@ -562,7 +563,7 @@ def process_enum(node, buffer, enum_contents, found_enum):
 
 
 def get_preprocessor_define(node, buffer):
-    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+    file = os.path.basename(node.file_name).split('.')[0]
     if file:
         file = ' [' + file + ']'
 
@@ -630,13 +631,16 @@ def process_function_string(node, func):
         return
 
     print("Processing Function: " + func)
-    file = node.file_name.rsplit('\\',1)[1].split('.')[0]
+
+    file = os.path.basename(node.file_name).split('.')[0]
+
     if file:
         file = ' [' + file + ']'
 
     func_type = ''
     return_type = ': '
     remaining = ''
+    
     m = fullfunction_re.search(func)
     if m:
         if m.group(1):
@@ -719,7 +723,6 @@ def read_string(buffer, found_comment, brace_level):
         i += 1
 
     return (result, found_comment, brace_level + result.count('{') - result.count('}'))
-
 
 to_process = OrderedSetQueue()
 nodes = dict() # map files to nodes
