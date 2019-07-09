@@ -552,7 +552,7 @@ def process_function_string(node, func, is_native) :
     if file :
         file = ' [' + file + ']'
 
-    returntype = ''
+    return_type = ''
     m = re.search(r'(\b[^\s]+)(?:[ \t]+|:)([^\s]+\(.*\n?)', func)
     if m :
         return_type = ': ' + m.group(1)
