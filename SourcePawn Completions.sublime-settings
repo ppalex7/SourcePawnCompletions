@@ -1,9 +1,17 @@
 {
     // path to sourcemod "scripting/include" folder
-    // Windows example:
-    // "include_directory": "D:\\sourcemod\\scripting\\include",
+    // Windows example: // Support for multiple directories. Searches top to bottom until it finds include
+    // "include_directory": [
+    //        "D:\\sourcemod\\scripting\\include",
+    //        "C:\\another\\sourcemod\\include",  // optional
+    ///       "etc . . ." // optional
+    // ],
     // OSX example:
-    // "include_directory": "/Users/ppalex/sourcemod/scripting/include",
+    // "include_directory": [
+    //        "/Users/ppalex/sourcemod/scripting/include",
+    //        "/Users/ppalex/some/other/sourcemod/scripting/include", // optional
+    //        "etc . . ." // optional
+    // ],
 
     // delay (in seconds) before regenerating auto-completion snippets
     "live_refresh_delay": 1.0
