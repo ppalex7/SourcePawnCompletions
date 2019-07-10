@@ -252,7 +252,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
 
         base_includes = set()
 
-        includes = include_re.findall(view_buffer)
+        includes = includes_re.findall(view_buffer)
 
         for include in includes:
             self.load_from_file(view_file_name, include, current_node, current_node, base_includes)
