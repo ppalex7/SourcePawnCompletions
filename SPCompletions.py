@@ -16,6 +16,7 @@ import re
 import string
 import sys
 import sublime, sublime_plugin
+import codecs
 from collections import defaultdict
 from queue import *
 from threading import Timer, Thread
@@ -270,7 +271,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
 
         base_includes = set()
 
-        with open(file_name, 'r') as f:
+        with codec.open(file_name, 'r', "utf-8") as f:
             print ('Processing Include File %s' % file_name)
             includes = includes_re.findall(f.read())
 
@@ -298,7 +299,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
         if not node_added or not exists:
             return
 
-        with open(file_name, 'r') as f:
+        with codecs.open(file_name, 'r', "utf-8") as f:
             print ('Processing Include File %s' % file_name)
             includes = re.findall('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', f.read(), re.MULTILINE)
 
@@ -416,7 +417,7 @@ def process_buffer(text, node):
 
 
 def process_include_file(node):
-    with open(node.file_name) as file:
+    with codecs.open(node.file_name, "r", "utf-8") as file:
         process_lines(file, node)
 
 
@@ -585,6 +586,7 @@ def get_full_function_string(line_reader, node, buffer, found_comment, brace_lev
     temp = ''
     full_func_str = None
     open_paren_found = False
+    
     while buffer is not None:
         buffer = buffer.strip()
         if not open_paren_found:
