@@ -271,7 +271,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
 
         base_includes = set()
 
-        with codec.open(file_name, 'r', "utf-8") as f:
+        with codecs.open(file_name, 'r', "utf-8") as f:
             print ('Processing Include File %s' % file_name)
             includes = includes_re.findall(f.read())
 
