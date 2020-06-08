@@ -108,7 +108,8 @@ class SPCompletions(sublime_plugin.EventListener):
         and not view.match_selector(locations[0], 'source.inc -string -comment -constant'):
             return []
 
-        return (self.generate_funcset(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        # return (self.generate_funcset(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS | sublime.INHIBIT_EXPLICIT_COMPLETIONS)
+        return (self.generate_funcset(view.file_name()), sublime.INHIBIT_WORD_COMPLETIONS)
 
 
     def generate_funcset(self, file_name):
@@ -194,10 +195,16 @@ def _save_user_settings():
         # build-system
         build_filename = 'SourcePawn.sublime-build'
         build = sublime.load_settings(build_filename)
+
+        if not build.get('file_patterns'):
+            build.set('file_patterns', ["*.sp"])
+        if not build.get('quiet'):
+            build.set('quiet', true)
         if not build.get('file_regex'):
-            build.set('file_regex', '(.*)\\((\\d+)\\) :')
+            build.set('file_regex', '(.*)\\((\\d+)\\) : ()(.*$)')
         if not build.get('selector'):
             build.set('selector', 'source.sp')
+
         sublime.save_settings(build_filename)
 
 
