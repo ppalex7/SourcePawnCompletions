@@ -308,7 +308,7 @@ class ProcessQueueThread(watchdog.utils.DaemonThread):
 
         with codecs.open(file_name, 'r', "utf-8") as f:
             print ('Processing Include File %s' % file_name)
-            includes = re.findall('^[\\s]*#include[\\s]+[<"]([^>"]+)[>"]', f.read(), re.MULTILINE)
+            includes = re.findall(r'^[ \t]*#include[ \t]+[<"]([^>"]+)[>"]', f.read(), re.MULTILINE)
 
         for include in includes:
             self.load_from_file(view_file_name, include, node, base_node, base_includes)
@@ -441,6 +441,22 @@ def process_lines(line_reader, node):
         if buffer is None:
             break
 
+        # strip multiline comments if only written on single line
+        buffer = comment_re.sub('', buffer)
+        buffer = buffer.strip()
+
+        # assumes no nested comments. compiler marks those as invalid
+        while buffer.startswith('/*'):
+            # print('Skipping multi-line comment')
+            pos = buffer.find('*/');
+            while pos == -1:
+                buffer = read_line(line_reader)
+                pos = buffer.find('*/')
+            buffer = buffer[pos+2:].strip()
+
+        if not buffer or buffer.startswith('//'):
+            continue
+
         if brace_level == 0:
             m = enum_re.search(buffer)
             if m:
@@ -448,27 +464,40 @@ def process_lines(line_reader, node):
                     print("Found enum: " + m.group(0))
                     found_enum = True
                     enum_contents = ''
+
             elif buffer.strip().startswith('#pragma deprecated'):
                 buffer = read_line(line_reader)
-                if buffer is not None and buffer.strip().startswith('stock '):
+                if buffer is not None and buffer.startswith('stock '):
                     pos = buffer.find('{')
-                    if pos > 0: # if line contains {, jump to it
+                    if pos != -1: # if line contains {, jump to it
                         buffer = buffer[pos:]
                     buffer = skip_brace_line(line_reader, buffer)
                     continue
-            elif buffer.strip().startswith('public'):
+
+            elif buffer.startswith('public ') or buffer.startswith('struct '):
                 pos = buffer.find('{')
-                if pos > 0: # if line contains {, jump to it
+                print("Skipping public or struct")
+                if pos != -1: # if line contains {, jump to it
                     buffer = buffer[pos:]
                 else: # otherwise, skip to next line
-                    print("continuing")
                     continue
+
+            elif buffer.startswith('methodmap '):
+                print('Found methodmap')
+
+                pos = buffer.find('{')
+                print("Skipping public, methodmap, or struct")
+                if pos != -1: # if line contains {, jump to it
+                    buffer = buffer[pos:]
+                else: # otherwise, skip to next line
+                    continue
+
             elif function_re.search(buffer):
                 (buffer, found_comment, brace_level) = get_full_function_string(line_reader, node, buffer, found_comment, brace_level)
 
         (buffer, found_comment, brace_level) = read_string(buffer, found_comment, brace_level)
 
-        if len(buffer) <= 0:
+        if not buffer:
             continue
 
         if found_enum:
@@ -476,6 +505,8 @@ def process_lines(line_reader, node):
         elif buffer.startswith('#define '):
             buffer = get_preprocessor_define(node, buffer)
 
+
+# def process_methodmap(node, buffer):
 
 def process_variable(node, buffer):
     file = os.path.basename(node.file_name).rsplit('.')[0]
@@ -739,7 +770,8 @@ file_event_handler = IncludeFileEventHandler()
 include_dirs = Wrapper()
 includes_re = re.compile(r'^[ \t*]*#include[\s]+[<"]([^>"]+)[>"]', re.MULTILINE)
 local_re = re.compile(r'\.(sp|inc)$')
-enum_re = re.compile(r'^[ \t]*enum\b[ \t]*(struct[ \t]*)?([\w_]+)?')
-function_re = re.compile(r'^[ \t]*(?:(native|stock|forward)[ \t]*)?(?:([\w_]+)(?:[ \t]+|:))?([\w_]+[ \t]*\()')
-fullfunction_re = re.compile(r'^[ \t]*(?:(native|stock|forward) )?(?:([\w_]+)(?: +|:))?([\w_]+ *\(.*?\))')
+enum_re = re.compile(r'^[ \t]*enum\b[ \t]+(struct\b[ \t]+)?([\w_]+)?')
+function_re = re.compile(r'^[ \t]*(?:(native|stock|forward)\b[ \t]+)?(?:([\w_]+)(?:[ \t]+|:))?([\w_]+[ \t]*\()')
+fullfunction_re = re.compile(r'^[ \t]*(?:(native|stock|forward)\b[ \t]+)?(?:([\w_]+)(?: +|:))?([\w_]+ *\(.*?\))')
 define_re = re.compile(r'#define[ \t]+([^\s]+)[\s]+(.+)')
+comment_re = re.compile(r'\/\*(.*?\n?)+\*\/')
