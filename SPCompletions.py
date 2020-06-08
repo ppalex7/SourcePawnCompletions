@@ -442,22 +442,22 @@ def process_lines(line_reader, node):
             break
 
         # strip multiline comments if only written on single line
-        # buffer = comment_re.sub('', buffer)
-        # buffer = buffer.strip()
-        # if not buffer or buffer.startswith('//'):
-        #     continue
+        buffer = comment_re.sub('', buffer)
+        buffer = buffer.strip()
+        if not buffer or buffer.startswith('//'):
+            continue
             
-        # # assumes no nested comments. compiler marks those as invalid
-        # while buffer.startswith('/*'):
-        #     # print('Skipping multi-line comment')
-        #     pos = buffer.find('*/');
-        #     while pos == -1:
-        #         buffer = read_line(line_reader)
-        #         pos = buffer.find('*/')
-        #     buffer = buffer[pos+2:].strip()
+        # assumes no nested comments. compiler marks those as invalid
+        while buffer.startswith('/*'):
+            # print('Skipping multi-line comment')
+            pos = buffer.find('*/');
+            while pos == -1:
+                buffer = read_line(line_reader)
+                pos = buffer.find('*/')
+            buffer = buffer[pos+2:].strip()
 
-        # if not buffer or buffer.startswith('//'):
-        #     continue
+        if not buffer or buffer.startswith('//'):
+            continue
 
         if brace_level == 0:
             m = enum_re.search(buffer)
@@ -776,4 +776,4 @@ enum_re = re.compile(r'^[ \t]*enum\b[ \t]+(struct\b[ \t]+)?([\w_]+)?')
 function_re = re.compile(r'^[ \t]*(?:(native|stock|forward)\b[ \t]+)?(?:([\w_]+)(?:[ \t]+|:))?([\w_]+[ \t]*\()')
 fullfunction_re = re.compile(r'^[ \t]*(?:(native|stock|forward)\b[ \t]+)?(?:([\w_]+)(?: +|:))?([\w_]+ *\(.*?\))')
 define_re = re.compile(r'#define[ \t]+([^\s]+)[\s]+(.+)')
-comment_re = re.compile(r'\/\*(.*?\n?)+\*\/')
+comment_re = re.compile(r'\/\*(.*?)\*\/')
