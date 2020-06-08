@@ -442,20 +442,22 @@ def process_lines(line_reader, node):
             break
 
         # strip multiline comments if only written on single line
-        buffer = comment_re.sub('', buffer)
-        buffer = buffer.strip()
+        # buffer = comment_re.sub('', buffer)
+        # buffer = buffer.strip()
+        # if not buffer or buffer.startswith('//'):
+        #     continue
+            
+        # # assumes no nested comments. compiler marks those as invalid
+        # while buffer.startswith('/*'):
+        #     # print('Skipping multi-line comment')
+        #     pos = buffer.find('*/');
+        #     while pos == -1:
+        #         buffer = read_line(line_reader)
+        #         pos = buffer.find('*/')
+        #     buffer = buffer[pos+2:].strip()
 
-        # assumes no nested comments. compiler marks those as invalid
-        while buffer.startswith('/*'):
-            # print('Skipping multi-line comment')
-            pos = buffer.find('*/');
-            while pos == -1:
-                buffer = read_line(line_reader)
-                pos = buffer.find('*/')
-            buffer = buffer[pos+2:].strip()
-
-        if not buffer or buffer.startswith('//'):
-            continue
+        # if not buffer or buffer.startswith('//'):
+        #     continue
 
         if brace_level == 0:
             m = enum_re.search(buffer)
@@ -529,7 +531,7 @@ def process_variable(node, buffer):
             elif c == ' ' or c == '=' or c == ';':
                 result = result.strip()
                 if result != '':
-                    node.funcs.add((result + '  (variable)' + file, result))
+                    node.funcs.add((result + '\t(variable)' + file, result))
                 result = ''
                 consumingName = False
                 consumingBrackets = False
@@ -542,7 +544,7 @@ def process_variable(node, buffer):
 
     result = result.strip()
     if result != '':
-        node.funcs.add((result + '  (variable)' + file, result))
+        node.funcs.add((result + '\t(variable)' + file, result))
 
     return ''
 
@@ -582,7 +584,7 @@ def process_enum(node, buffer, enum_contents, found_enum):
             elif c == ',':
                 buffer = buffer.strip()
                 if buffer != '':
-                    node.funcs.add((buffer + ' (enum' + enum_type + ')' + file, buffer))
+                    node.funcs.add((buffer + '\t(enum' + enum_type + ')' + file, buffer))
 
                 ignore = False
                 buffer = ''
@@ -593,7 +595,7 @@ def process_enum(node, buffer, enum_contents, found_enum):
 
         buffer = buffer.strip()
         if buffer != '':
-            node.funcs.add((buffer + ' (enum' + enum_type + ')' + file, buffer))
+            node.funcs.add((buffer + '\t(enum' + enum_type + ')' + file, buffer))
 
         buffer = ''
 
@@ -614,7 +616,7 @@ def get_preprocessor_define(node, buffer):
         buffer = ''
         name = define.group(1)
         value = define.group(2).strip()
-        node.funcs.add((name + '  (constant: ' + value + ')' + file, name))
+        node.funcs.add((name + '\t(constant: ' + value + ')' + file, name))
     return buffer
 
 
@@ -707,7 +709,7 @@ def process_function_string(node, func):
         i += 1
     autocomplete += ')'
 
-    node.funcs.add((funcname + ' (function' + return_type + ')' + file, autocomplete))
+    node.funcs.add((funcname + '\t(function' + return_type + ')' + file, autocomplete))
 
 
 def skip_brace_line(line_reader, buffer):
