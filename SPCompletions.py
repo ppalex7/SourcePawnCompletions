@@ -190,22 +190,22 @@ def add_include_to_queue(file_name):
 def _save_user_settings():
     settings = _get_settings()
     if not settings.get('bootstrapped'):
-        settings.set('bootstrapped', True)
-        sublime.save_settings(_settings_filename())
         # build-system
         build_filename = 'SourcePawn.sublime-build'
         build = sublime.load_settings(build_filename)
 
-        if not build.get('file_patterns'):
+        if not build.has('file_patterns'):
             build.set('file_patterns', ["*.sp"])
-        if not build.get('quiet'):
-            build.set('quiet', true)
-        if not build.get('file_regex'):
+        if not build.has('quiet'):
+            build.set('quiet', True)
+        if not build.has('file_regex'):
             build.set('file_regex', '(.*)\\((\\d+)\\) : ()(.*$)')
-        if not build.get('selector'):
+        if not build.has('selector'):
             build.set('selector', 'source.sp')
 
         sublime.save_settings(build_filename)
+        settings.set('bootstrapped', True)
+        sublime.save_settings(_settings_filename())
 
 
 class IncludeFileEventHandler(watchdog.events.FileSystemEventHandler):
