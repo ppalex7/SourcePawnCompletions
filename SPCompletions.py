@@ -189,7 +189,8 @@ def add_include_to_queue(file_name):
 
 def _save_user_settings():
     settings = _get_settings()
-    if not settings.get('bootstrapped'):
+    # Legacy True may have been saved before build settings were initialized.
+    if settings.get('bootstrapped') != 2:
         # build-system
         build_filename = 'SourcePawn.sublime-build'
         build = sublime.load_settings(build_filename)
@@ -204,7 +205,7 @@ def _save_user_settings():
             build.set('selector', 'source.sp')
 
         sublime.save_settings(build_filename)
-        settings.set('bootstrapped', True)
+        settings.set('bootstrapped', 2)
         sublime.save_settings(_settings_filename())
 
 
